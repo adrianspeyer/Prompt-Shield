@@ -14,8 +14,9 @@
     label { font-size: 14px; margin-right: 10px; }
   </style>
 </head>
-<body>
+<body onload="updateStrictnessDisplay()">
   <h1>PromptShield – Advanced AI Detection & Encoding Tool</h1>
+
   <div id="controls">
     <button onclick="switchMode('encode')">Encode Instructions</button>
     <button onclick="switchMode('detect')">Detect AI Content</button>
@@ -66,7 +67,7 @@
       return seq;
     }
 
-    // ---- Encoding (preserves all formatting) ----
+    // ---- Encoding ----
     let currentWatermark = randomWatermark();
     function encodeText() {
       currentWatermark = randomWatermark();
@@ -213,7 +214,7 @@
         name: 'N-gram Repetition', key: 'NgramRepetition',
         test: text => {
           const ws = text.split(/\s+/), tr = {};
-          for (let i=0; i<ws.length-2; i++) {
+          for (let i = 0; i < ws.length-2; i++) {
             const g = ws[i]+' '+ws[i+1]+' '+ws[i+2];
             tr[g] = (tr[g]||0)+1;
             if (tr[g] > 2) return true;
@@ -255,8 +256,10 @@
     }
 
     function switchMode(mode) {
-      document.getElementById('encodeMode').style.display = mode==='encode'?'block':'none';
-      document.getElementById('detectMode').style.display = mode==='detect'?'block':'none';
+      document.getElementById('encodeMode').style.display =
+        mode === 'encode' ? 'block' : 'none';
+      document.getElementById('detectMode').style.display =
+        mode === 'detect' ? 'block' : 'none';
     }
 
     function startDetection() {
@@ -270,7 +273,8 @@
       document.getElementById('spinner').style.display = 'none';
       const words = text.split(/\s+/).filter(w=>w);
       if (words.length < 50) {
-        document.getElementById('results').innerText = 'Not enough data to judge.'; return;
+        document.getElementById('results').innerText = 'Not enough data to judge.';
+        return;
       }
       const strict = parseFloat(document.getElementById('strictnessSlider').value);
       let score = 0, msgs = [], facts = [];
@@ -293,22 +297,28 @@
     function clearDetect() {
       document.getElementById('detectInput').value = '';
       document.getElementById('results').innerHTML = '';
-      document.getElementById('scoreChart').getContext('2d').clearRect(0,0,800,600);
+      document.getElementById('scoreChart')
+        .getContext('2d').clearRect(0,0,800,600);
     }
 
     function renderChart(facts) {
       const ctx = document.getElementById('scoreChart').getContext('2d');
       ctx.clearRect(0,0,800,600);
       facts.forEach((f,i) => {
-        ctx.fillStyle = '#4a90e2'; ctx.fillRect(200, i*40+20, f.value*40, 25);
-        ctx.fillStyle = '#000'; ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`, 10, i*40+35);
+        ctx.fillStyle = '#4a90e2';
+        ctx.fillRect(200, i*40+20, f.value*40, 25);
+        ctx.fillStyle = '#000';
+        ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`, 10, i*40+35);
       });
     }
 
     function exportReport() {
       const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'ai_detection_report.json'; a.click();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ai_detection_report.json';
+      a.click();
       URL.revokeObjectURL(url);
     }
   </script>
