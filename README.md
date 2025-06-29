@@ -10,8 +10,10 @@
 ### ✍️ Encode an Assignment
 1. Switch to **Encode** mode.  
 2. Paste your assignment instructions.  
-3. Click **Encode** — injects a random zero-width watermark across the text.  
-4. Click **Copy to Clipboard** and share with students.
+3. Click **Encode** — this will:  
+   - Wrap your text in a randomized zero-width watermark.  
+   - **Inject one “bait” phrase** (from our subtle assistive prompts) at the first paragraph break (or at the end if none).  
+4. Click **Copy to Clipboard** and share the encoded instructions with students.
 
 ### 🔎 Detect AI Use
 1. Switch to **Detect** mode.  
@@ -20,7 +22,7 @@
 4. Click **Analyze** to get:
    - **AI Match Score** (0–10)  
    - **Likelihood** (“Moderate” / “High”)  
-   - **Factor breakdown** (messages)  
+   - **Factor breakdown** (which rules fired)  
    - **Bar-chart visualization**  
 5. (Optional) **Export Report** as JSON for record-keeping.
 
@@ -28,31 +30,31 @@
 
 ## 🚨 Detection Signals
 
-| Signal                     | Description                                                      |
-| -------------------------- | ---------------------------------------------------------------- |
-| **Watermark**              | Invisible zero-width markers                                     |
-| **Few Contractions**       | Formal tone with few “don’t/aren’t/I’m…”                         |
-| **Repetitive Structures**  | “One major reason…”, “In conclusion…”, etc.                      |
-| **Excessive Transitions**  | “Moreover,” “Therefore,” “Additionally,” etc.                    |
-| **Uniform Paragraphs**     | Very similar lengths across paragraphs                           |
-| **No Personal Voice**      | Lack of “I/you/we/my/our”                                        |
-| **Numeric Density**        | >3% of tokens are numbers or statistics                          |
-| **Opinion Insertion**      | “In my opinion,” “I believe,” etc.                               |
-| **Rhetorical Questions**   | Absence of any “?”                                               |
-| **Readability Score**      | Flesch–Kincaid between 35–60 (narrow AI band)                    |
-| **Low Lexical Diversity**  | Repetitive vocabulary (unique/total < 0.4)                       |
-| **Passive Voice**          | Frequent “is/was/being … -ed” patterns                           |
-| **N-gram Repetition**      | Same trigram appears >2 times                                    |
-| **Sentiment Uniformity**   | Very low variance in positive/negative tone                      |
-| **Hedge Words**            | “possibly,” “arguably,” “potentially,” etc. (>3)                |
-| **Emoji Usage**            | Any true pictographic emoji (faces, hands, weather symbols)     |
-| **Complex Punctuation**    | >5 occurrences of `;` `:` `,`                                   |
-| **Adverb Overuse**         | >10 “-ly” adverbs                                                |
-| **Cliché Phrases**         | Multiple stock phrases (“at the end of the day,” etc.)           |
-| **Long Sentences**         | Avg. sentence length > 25 words                                  |
-| **Ellipsis Usage**         | >1 occurrence of `…` or `...`                                    |
-| **Em-Dash Usage**          | >2 occurrences of em-dash (`—`)                                  |
-| **Punctuation Spacing**    | Inconsistent “. Word” vs “.  Word” or “,Word” vs “, Word” → _subtracts_ score (human tell) |
+| Signal                     | Description                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| **Watermark**              | Invisible zero-width markers (ZWSP, ZWNJ, etc.) wrapped around the content               |
+| **BaitPhrase**             | One of our subtle “assistive” bait sentences was detected in the text                    |
+| **Few Contractions**       | Formal tone: fewer than 4 common contractions (“don’t,” “aren’t,” etc.)                 |
+| **Repetitive Structures**  | Repeated essay scaffolding (“One major reason…,” “In conclusion…,” etc.)                 |
+| **Excessive Transitions**  | >3 transition words (“Moreover,” “Therefore,” “Additionally,” etc.)                      |
+| **Uniform Paragraphs**     | Paragraph-lengths all very similar (±10 words)                                           |
+| **No Personal Voice**      | <2 personal pronouns (“I,” “we,” “you,” etc.)                                           |
+| **Numeric Density**        | >3% of tokens are numbers or statistics                                                  |
+| **Subtle Opinion Insertion**| Boilerplate opinion phrases (“In my opinion,” “It is important to note”)               |
+| **Rhetorical Questions**   | Absence of any “?” (only checked on ≥3 sentences)                                        |
+| **Readability Score**      | Flesch–Kincaid between 35–60 (narrow AI band)                                            |
+| **Low Lexical Diversity**  | Unique/total word ratio < 0.4                                                            |
+| **Passive Voice**          | >2 “is/was/being … -ed” patterns                                                         |
+| **N-gram Repetition**      | Any trigram appearing >2 times                                                           |
+| **Sentiment Uniformity**   | Very low variance in positive/negative tone                                              |
+| **Hedge Words**            | >3 hedge words (“possibly,” “arguably,” etc.)                                           |
+| **Adverb Overuse**         | >10 “-ly” adverbs                                                                        |
+| **Cliché Phrases**         | >1 stock phrase (including “in conclusion,” “to summarize,” etc.)                       |
+| **Long Sentences**         | Average sentence length > 25 words                                                       |
+| **Ellipsis Usage**         | >1 occurrence of `…` or `...`                                                            |
+| **Em-Dash Usage**          | >2 occurrences of `—`                                                                    |
+| **Complex Punctuation**    | >5 total of `;` `:` `,`                                                                  |
+| **Punctuation Spacing**    | Inconsistent “. Word” vs “.  Word” or “,Word” vs “, Word” → _subtracts_ score (human tell)|
 
 ---
 
@@ -63,13 +65,14 @@ All rule weights live in the `WEIGHTS` object at the top of the `<script>`:
 ```js
 const WEIGHTS = {
   Watermark:            5,
+  BaitPhrase:           2,
   FewContractions:      2,
   RepetitiveStructures: 4.5,
   ExcessiveTransitions: 2,
   UniformParagraphs:    2,
   NoPersonalVoice:      2,
   NumericDensity:       2,
-  OpinionInsertion:     1.5,
+  OpinionInsertion:     1.0,
   RhetoricalQuestions:  2,
   ReadabilityScore:     1.5,
   LowLexicalDiversity:  1.5,
