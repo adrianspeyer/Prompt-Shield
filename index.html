@@ -58,7 +58,7 @@
     <button onclick="detectAI()">Analyze</button>
     <button onclick="clearDetect()">Clear</button>
     <div id="results"></div>
-    <canvas id="scoreChart" width="600" height="700"></canvas>
+    <canvas id="scoreChart" width="800" height="1000"></canvas>
   </div>
 
   <script>
@@ -93,92 +93,73 @@
       let messages = [];
       let factors = [];
 
+      function addFactor(name, value, msg) {
+        if (value > 0) messages.push(msg);
+        score += value;
+        factors.push({ name, value });
+      }
+
       // Watermark
-      let wScore = text.includes("​‌‍⁠⁡") ? 5 : 0;
-      if (wScore) messages.push("💧 Watermark detected — strong AI indicator");
-      score += wScore;
-      factors.push({ name: "Watermark", value: wScore });
+      addFactor("Watermark", text.includes("​‌‍⁠⁡") ? 5 : 0, "💧 Watermark detected — strong AI indicator");
 
       // Contractions
-      let cScore = 0;
       const contractions = (text.match(/\b(I'm|don't|can't|won't|isn't|aren't|wasn't|weren't|doesn't|didn't|hasn't|haven't|hadn't|shouldn't|wouldn't|couldn't|mustn't|let's|that's|there's|what's|who's|where's|how's)\b/gi) || []).length;
-      if (contractions < 3) {
-        cScore = 1.5;
-        messages.push("🚫 Few or no contractions (formal tone)");
-      }
-      score += cScore;
-      factors.push({ name: "Contractions", value: cScore });
+      addFactor("Contractions", contractions < 3 ? 1.5 : 0, "🚫 Few or no contractions (formal tone)");
 
       // Formal connectors
-      let fScore = 0;
       const formalIndicators = (text.match(/\b(moreover|furthermore|in addition|additionally|thus|therefore|hence|as a result|in summary|in other words|it is important to note|on the other hand)\b/gi) || []).length;
-      if (formalIndicators > 2) {
-        fScore = 2;
-        messages.push("🚨 Multiple formal connectors — possible AI summarization style");
-      }
-      score += fScore;
-      factors.push({ name: "Connectors", value: fScore });
+      addFactor("Connectors", formalIndicators > 2 ? 2 : 0, "🚨 Multiple formal connectors — possible AI style");
 
       // Lexical diversity
-      let lScore = 0;
       const words = text.split(/\s+/);
       const uniqueWords = new Set(words.map(w => w.toLowerCase()));
-      if (uniqueWords.size / words.length < 0.4) {
-        lScore = 2;
-        messages.push("📊 Low lexical diversity — possible AI summarization");
-      }
-      score += lScore;
-      factors.push({ name: "Lexical Diversity", value: lScore });
+      addFactor("Lexical Diversity", uniqueWords.size / words.length < 0.4 ? 2 : 0, "📊 Low lexical diversity — possible AI summarization");
 
-      // Personal pronouns
-      let pScore = 0;
-      if (!/\b(I|we|my|our|you)\b/i.test(text)) {
-        pScore = 1.5;
-        messages.push("🙅‍♂️ No personal pronouns — neutral AI tone");
-      }
-      score += pScore;
-      factors.push({ name: "Pronouns", value: pScore });
+      // Pronouns
+      addFactor("Pronouns", !/\b(I|we|my|our|you)\b/i.test(text) ? 1.5 : 0, "🙅‍♂️ No personal pronouns — neutral AI tone");
 
-      // Repeated bigrams
-      let rScore = 0;
+      // Repetition
       const bigrams = {};
       for (let i = 0; i < words.length - 1; i++) {
         const pair = words[i].toLowerCase() + " " + words[i + 1].toLowerCase();
         bigrams[pair] = (bigrams[pair] || 0) + 1;
       }
-      if (Object.values(bigrams).filter(c => c > 2).length > 1) {
-        rScore = 1.5;
-        messages.push("🔁 Repeated phrase patterns — possible AI structuring");
-      }
-      score += rScore;
-      factors.push({ name: "Repetition", value: rScore });
+      addFactor("Repetition", Object.values(bigrams).filter(c => c > 2).length > 1 ? 1.5 : 0, "🔁 Repeated phrase patterns — possible AI structuring");
 
-      // Sentence length uniformity
-      let sScore = 0;
+      // Sentence length
       const sentences = text.match(/[^.!?]+[.!?]/g) || [];
       if (sentences.length > 3) {
         const lens = sentences.map(s => s.trim().split(/\s+/).length);
         const avg = lens.reduce((a, b) => a + b, 0) / lens.length;
         const variance = lens.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / lens.length;
-        if (variance < 20) {
-          sScore = 1.5;
-          messages.push("📏 Uniform sentence lengths — possible AI drafting");
-        }
+        addFactor("Sentence Length", variance < 20 ? 1.5 : 0, "📏 Uniform sentence lengths — possible AI drafting");
+      } else {
+        addFactor("Sentence Length", 0, "");
       }
-      score += sScore;
-      factors.push({ name: "Sentence Length", value: sScore });
+
+      // Modal verbs
+      const modalCount = (text.match(/\b(should|would|could|might|may|must)\b/gi) || []).length;
+      addFactor("Modal Verbs", modalCount > 5 ? 1.5 : 0, "⚖️ Heavy modal verbs usage — AI hedging style");
+
+      // Hedging language
+      const hedgeCount = (text.match(/\b(possibly|potentially|may|might|arguably|perhaps)\b/gi) || []).length;
+      addFactor("Hedging", hedgeCount > 3 ? 1.5 : 0, "💬 Excessive hedging language — possible AI uncertainty");
+
+      // Passive voice (approximate)
+      const passiveCount = (text.match(/\b(is|are|was|were|be|been|being)\b\s+\w+ed\b/gi) || []).length;
+      addFactor("Passive Voice", passiveCount > 4 ? 1.5 : 0, "🎭 Frequent passive voice — formal AI tone");
 
       // Combo triggers
       const combos = [
-        { pattern: /together, we can.*|collaborative approach/i, weight: 2, reason: "🧠 Combo: 'together, we can'" },
-        { pattern: /influence.*platforms.*responsible/i, weight: 2, reason: "🧠 Combo: 'influence, platforms, responsible'" },
-        { pattern: /strive.*ecosystem.*truth/i, weight: 2, reason: "🧠 Combo: 'strive, ecosystem, truth'" }
+        { pattern: /together, we can.*|collaborative approach/i, value: 2, msg: "🧠 Combo: 'together, we can'" },
+        { pattern: /influence.*platforms.*responsible/i, value: 2, msg: "🧠 Combo: 'influence, platforms, responsible'" },
+        { pattern: /strive.*ecosystem.*truth/i, value: 2, msg: "🧠 Combo: 'strive, ecosystem, truth'" }
       ];
       let comboScore = 0;
       combos.forEach(rule => {
         if (rule.pattern.test(text)) {
-          comboScore += rule.weight;
-          messages.push(rule.reason);
+          comboScore += rule.value;
+          messages.push(rule.msg);
         }
       });
       score += comboScore;
@@ -194,29 +175,31 @@
       document.getElementById("detectInput").value = "";
       document.getElementById("results").innerHTML = "";
       const ctx = document.getElementById("scoreChart").getContext("2d");
-      ctx.clearRect(0, 0, 600, 700);
+      ctx.clearRect(0, 0, 800, 1000);
     }
 
     function drawHorizontalChart(factors) {
       const canvas = document.getElementById("scoreChart");
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const barHeight = 20;
-      const spacing = 15;
-      const startX = 150;
-      const startY = 20;
-      ctx.font = "12px Arial";
+      const barHeight = 30;
+      const spacing = 25;
+      const labelWidth = 180;
+      const startX = labelWidth + 20;
+      const startY = 30;
+      ctx.font = "14px Arial";
       ctx.textAlign = "right";
+      const scale = (canvas.width - startX - 50) / 10;
       factors.forEach((factor, i) => {
         const y = startY + i * (barHeight + spacing);
-        const barWidth = factor.value * 40;
+        const barWidth = factor.value * scale;
         ctx.fillStyle = "#000";
-        ctx.fillText(factor.name, startX - 10, y + barHeight / 2 + 4);
+        ctx.fillText(factor.name, labelWidth, y + barHeight / 2 + 5);
         ctx.fillStyle = "#4a90e2";
         ctx.fillRect(startX, y, barWidth, barHeight);
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
-        ctx.fillText(factor.value.toFixed(1), startX + barWidth / 2, y + barHeight / 2 + 4);
+        ctx.fillText(factor.value.toFixed(1), startX + barWidth / 2, y + barHeight / 2 + 5);
         ctx.textAlign = "right";
       });
     }
