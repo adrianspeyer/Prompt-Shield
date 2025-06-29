@@ -74,22 +74,23 @@
     function fleschKincaid(txt) {
       const sents = (txt.match(/[^.!?]+[.!?]/g) || []).length;
       const ws = txt.split(/\s+/);
-      const syl = ws.reduce((a,w)=>a+countSyllables(w),0);
-      const ASL = sents ? ws.length/sents : 0;
-      const ASW = ws.length ? syl/ws.length : 0;
-      return 0.39*ASL + 11.8*ASW - 15.59;
+      const syl = ws.reduce((a,w) => a + countSyllables(w), 0);
+      const ASL = sents ? ws.length / sents : 0;
+      const ASW = ws.length ? syl / ws.length : 0;
+      return 0.39 * ASL + 11.8 * ASW - 15.59;
     }
     function sentimentVariance(pars) {
-      const pos=['good','great','positive','strong','effective','successful','important'];
-      const neg=['weak','bad','problem','issue','difficult','fail','collapse'];
-      const scores = pars.map(p=>{
+      const pos = ['good','great','positive','strong','effective','successful','important'];
+      const neg = ['weak','bad','problem','issue','difficult','fail','collapse'];
+      const scores = pars.map(p => {
         const ws = p.toLowerCase().split(/\W+/);
-        let s=0; ws.forEach(w=>{ if(pos.includes(w)) s++; if(neg.includes(w)) s--; });
-        return ws.length ? s/ws.length : 0;
+        let s = 0;
+        ws.forEach(w => { if (pos.includes(w)) s++; if (neg.includes(w)) s--; });
+        return ws.length ? s / ws.length : 0;
       });
-      if(scores.length<2) return 1;
-      const m = scores.reduce((a,b)=>a+b,0)/scores.length;
-      return scores.reduce((a,b)=>a+(b-m)**2,0)/scores.length;
+      if (scores.length < 2) return 1;
+      const mean = scores.reduce((a,b) => a + b, 0) / scores.length;
+      return scores.reduce((a,b) => a + (b - mean) ** 2, 0) / scores.length;
     }
 
     // ---- Configurable Weights ----
@@ -115,40 +116,152 @@
       ClichePhrases:        2,
       LongSentences:        1.5,
       EllipsisUsage:        1,
-      TitleCaseOveruse:     1,
-      EmDashUsage:          1.5
+      EmDashUsage:          1.5,
+      PunctuationSpacing:   1.5
     };
 
     // ---- Detection Rules ----
     let watermark = randomWatermark();
     const RULES = [
-      { key:'Watermark',            test:t=>t.includes(watermark), msg:'💧 Watermark detected.' },
-      { key:'FewContractions',      test:t=>(t.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi)||[]).length<4, msg:'🚫 Few contractions' },
-      { key:'RepetitiveStructures', test:t=>(t.match(/\b(One major reason|Another cause|A third reason|In conclusion)\b/gi)||[]).length>2, msg:'🔁 Repetitive structure' },
-      { key:'ExcessiveTransitions', test:t=>(t.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi)||[]).length>3, msg:'🌀 Excessive transitions' },
-      { key:'UniformParagraphs',    test:t=>{const ps=t.split(/\n+/).filter(p=>p.trim()), ls=ps.map(p=>p.split(/\s+/).length), avg=ls.reduce((a,b)=>a+b,0)/ls.length;return ls.length>2&&ls.every(l=>Math.abs(l-avg)<10);}, msg:'📏 Uniform paragraphs' },
-      { key:'NoPersonalVoice',      test:t=>(t.match(/\b(I|we|my|our|you|your)\b/gi)||[]).length<2, msg:'🙅‍♂️ No personal voice' },
-      { key:'NumericDensity',       test:t=>{const nums=t.match(/\b\d+(\.\d+)?%?\b/g)||[];return nums.length>t.split(/\s+/).length*0.03;}, msg:'🔢 High numeric density' },
-      { key:'OpinionInsertion',     test:t=>(t.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi)||[]).length>0, msg:'🗣️ Opinion insertion' },
-      { key:'RhetoricalQuestions',  test:t=>(t.match(/\?\s/g)||[]).length<1, msg:'❓ No questions' },
-      { key:'ReadabilityScore',     test:t=>{const fk=fleschKincaid(t);return fk>35&&fk<60;}, msg:'📐 Readability range' },
-      { key:'LowLexicalDiversity',  test:t=>{const ws=t.split(/\s+/),uw=new Set(ws.map(w=>w.toLowerCase()));return uw.size/ws.length<0.4;}, msg:'📊 Low diversity' },
-      { key:'PassiveVoice',         test:t=>(t.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g)||[]).length>2, msg:'🎭 Passive voice' },
-      { key:'NgramRepetition',      test:t=>{const ws=t.split(/\s+/),tr={};for(let i=0;i<ws.length-2;i++){const g=ws[i]+' '+ws[i+1]+' '+ws[i+2];tr[g]=(tr[g]||0)+1;if(tr[g]>2)return true;}return false;}, msg:'🔂 N-gram repetition' },
-      { key:'SentimentUniformity',  test:t=>{const ps=t.split(/\n+/).filter(p=>p.trim());return sentimentVariance(ps)<0.002;}, msg:'⚖️ Uniform sentiment' },
-      { key:'HedgeWords',           test:t=>(t.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi)||[]).length>3, msg:'🔍 Hedge words' },
-      { key:'AdverbOveruse',        test:t=> (t.match(/\b\w+ly\b/gi)||[]).length>10, msg:'🔍 Excessive adverb use' },
-      { key:'ClichePhrases',        test:t=>{const c=['at the end of the day',"in today's society",'the fact of the matter','think outside the box','going forward','level playing field'];return c.filter(p=>t.toLowerCase().includes(p)).length>1;}, msg:'⚠️ Multiple cliché phrases' },
-      { key:'LongSentences',        test:t=>{const s=(t.match(/[^.!?]+[.!?]/g)||[]);if(!s.length)return false;const avg=s.reduce((a,s)=>(a+s.split(/\s+/).length),0)/s.length;return avg>25;}, msg:'📏 Avg sentence > 25 words' },
-      { key:'EllipsisUsage',        test:t=> (t.match(/…|\.\.\./g)||[]).length>1, msg:'… Ellipsis overuse' },
-      { key:'TitleCaseOveruse',     test:t=>{const ws=t.split(/\s+/),tc=ws.filter(w=>/^[A-Z][a-z]+$/.test(w)).length;return tc>ws.length*0.05;}, msg:'🔠 Excessive Title-Case' },
-      { key:'EmDashUsage',          test:t=> (t.match(/—/g)||[]).length>2, msg:'— Heavy em-dash use' },
-
-      { key:'EmojiUsage',
-        test: t => (t.match(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}]/ug)||[]).length>0,
+      { key: 'Watermark',
+        test: t => t.includes(watermark),
+        msg: '💧 Watermark detected.'
+      },
+      { key: 'FewContractions',
+        test: t => (t.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi)||[]).length < 4,
+        msg: '🚫 Few contractions'
+      },
+      { key: 'RepetitiveStructures',
+        test: t => (t.match(/\b(One major reason|Another cause|A third reason|In conclusion)\b/gi)||[]).length > 2,
+        msg: '🔁 Repetitive structure'
+      },
+      { key: 'ExcessiveTransitions',
+        test: t => (t.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi)||[]).length > 3,
+        msg: '🌀 Excessive transitions'
+      },
+      { key: 'UniformParagraphs',
+        test: t => {
+          const ps = t.split(/\n+/).filter(p => p.trim());
+          const ls = ps.map(p => p.split(/\s+/).length);
+          const avg = ls.reduce((a,b) => a + b, 0) / ls.length;
+          return ls.length > 2 && ls.every(l => Math.abs(l - avg) < 10);
+        },
+        msg: '📏 Uniform paragraphs'
+      },
+      { key: 'NoPersonalVoice',
+        test: t => (t.match(/\b(I|we|my|our|you|your)\b/gi)||[]).length < 2,
+        msg: '🙅‍♂️ No personal voice'
+      },
+      { key: 'NumericDensity',
+        test: t => {
+          const nums = t.match(/\b\d+(\.\d+)?%?\b/g)||[];
+          return nums.length > t.split(/\s+/).length * 0.03;
+        },
+        msg: '🔢 High numeric density'
+      },
+      { key: 'OpinionInsertion',
+        test: t => (t.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi)||[]).length > 0,
+        msg: '🗣️ Opinion insertion'
+      },
+      { key: 'RhetoricalQuestions',
+        test: t => (t.match(/\?\s/g)||[]).length < 1,
+        msg: '❓ No questions'
+      },
+      { key: 'ReadabilityScore',
+        test: t => {
+          const fk = fleschKincaid(t);
+          return fk > 35 && fk < 60;
+        },
+        msg: '📐 Readability range'
+      },
+      { key: 'LowLexicalDiversity',
+        test: t => {
+          const ws = t.split(/\s+/), uw = new Set(ws.map(w => w.toLowerCase()));
+          return uw.size / ws.length < 0.4;
+        },
+        msg: '📊 Low diversity'
+      },
+      { key: 'PassiveVoice',
+        test: t => (t.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g)||[]).length > 2,
+        msg: '🎭 Passive voice'
+      },
+      { key: 'NgramRepetition',
+        test: t => {
+          const ws = t.split(/\s+/), tr = {};
+          for (let i=0; i<ws.length-2; i++){
+            const g = ws[i] + ' ' + ws[i+1] + ' ' + ws[i+2];
+            tr[g] = (tr[g]||0) + 1;
+            if (tr[g] > 2) return true;
+          }
+          return false;
+        },
+        msg: '🔂 N-gram repetition'
+      },
+      { key: 'SentimentUniformity',
+        test: t => {
+          const ps = t.split(/\n+/).filter(p => p.trim());
+          return sentimentVariance(ps) < 0.002;
+        },
+        msg: '⚖️ Uniform sentiment'
+      },
+      { key: 'HedgeWords',
+        test: t => (t.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi)||[]).length > 3,
+        msg: '🔍 Hedge words'
+      },
+      { key: 'AdverbOveruse',
+        test: t => (t.match(/\b\w+ly\b/gi)||[]).length > 10,
+        msg: '🔍 Excessive adverb use'
+      },
+      { key: 'ClichePhrases',
+        test: t => {
+          const c = [
+            'at the end of the day',
+            "in today's society",
+            'the fact of the matter',
+            'think outside the box',
+            'going forward',
+            'level playing field'
+          ];
+          return c.filter(p=>t.toLowerCase().includes(p)).length > 1;
+        },
+        msg: '⚠️ Multiple cliché phrases'
+      },
+      { key: 'LongSentences',
+        test: t => {
+          const sents = t.match(/[^.!?]+[.!?]/g)||[];
+          if (!sents.length) return false;
+          const avg = sents.reduce((sum, s) => sum + s.split(/\s+/).length, 0) / sents.length;
+          return avg > 25;
+        },
+        msg: '📏 Avg sentence > 25 words'
+      },
+      { key: 'EllipsisUsage',
+        test: t => (t.match(/…|\.\.\./g)||[]).length > 1,
+        msg: '… Ellipsis overuse'
+      },
+      { key: 'EmDashUsage',
+        test: t => (t.match(/—/g)||[]).length > 2,
+        msg: '— Heavy em-dash use'
+      },
+      {
+        key: 'PunctuationSpacing',
+        test: t => {
+          const singleP = (t.match(/\.\s[A-Z]/g)||[]).length;
+          const doubleP = (t.match(/\.\s\s[A-Z]/g)||[]).length;
+          const correctC = (t.match(/,\s\w/g)||[]).length;
+          const badC     = (t.match(/,(?!\s)/g)||[]).length;
+          return (singleP>0 && doubleP>0) || (correctC>0 && badC>0);
+        },
+        msg: '⌛ Inconsistent spacing around . and ,'
+      },
+      { key: 'EmojiUsage',
+        test: t => (t.match(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}]/ug)||[]).length > 0,
         msg: '😊 Frequent emoji usage'
       },
-      { key:'ComplexPunctuation',   test:t=>(t.match(/[;:,]/g)||[]).length>5, msg:'✍️ Complex punctuation usage' }
+      { key: 'ComplexPunctuation',
+        test: t => (t.match(/[;:,]/g)||[]).length > 5,
+        msg: '✍️ Complex punctuation usage'
+      }
     ];
 
     let reportData = {};
@@ -189,7 +302,8 @@
       document.getElementById('spinner').style.display='none';
       const ws = txt.split(/\s+/).filter(w=>w);
       if(ws.length<50){
-        document.getElementById('results').innerText='Not enough data to judge.'; return;
+        document.getElementById('results').innerText='Not enough data to judge.';
+        return;
       }
       const strict = parseFloat(document.getElementById('strictnessSlider').value);
       let score=0,msgs=[],details=[];
@@ -212,7 +326,7 @@
         ctx.fillStyle='#4a90e2';
         ctx.fillRect(200, i*40+20, f.value*40, 25);
         ctx.fillStyle='#000';
-        ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`,10,i*40+35);
+        ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`, 10, i*40+35);
       });
     }
     function clearDetect() {
