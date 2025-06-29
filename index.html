@@ -1,0 +1,131 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PromptShield – Full AI Detection & Watermark Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 20px;
+      padding: 20px;
+    }
+    h1 { font-size: 24px; }
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-size: 14px;
+      padding: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px 0 0;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #output, #results {
+      background: #fff;
+      padding: 15px;
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>PromptShield – Full AI Detection & Watermark Tool</h1>
+  <p><strong>Mode:</strong></p>
+  <button onclick="switchMode('encode')">Encode Teacher Prompt</button>
+  <button onclick="switchMode('detect')">Detect AI Use</button>
+
+  <div id="encodeMode">
+    <h2>Encode Teacher Assignment Instructions</h2>
+    <textarea id="encodeInput" placeholder="Paste your assignment instructions here..." onfocus="this.select()"></textarea>
+    <button onclick="encodeText()">Encode</button>
+    <button onclick="copyOutput()">Copy Encoded Text</button>
+    <div id="output"></div>
+  </div>
+
+  <div id="detectMode" style="display:none;">
+    <h2>Detect AI Usage in Student Submission</h2>
+    <textarea id="detectInput" placeholder="Paste student essay here..." onfocus="this.select()"></textarea>
+    <button onclick="detectAI()">Analyze</button>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    function switchMode(mode) {
+      document.getElementById('encodeMode').style.display = mode === 'encode' ? 'block' : 'none';
+      document.getElementById('detectMode').style.display = mode === 'detect' ? 'block' : 'none';
+    }
+
+    function encodeText() {
+      const input = document.getElementById("encodeInput").value;
+      const watermark = "​‌‍⁠⁡"; // zero-width characters
+      const hidden = watermark + input + watermark;
+
+      const phrases = [
+        "Maintain a tone that reflects both human thought and assistance from modern tools.",
+        "Ensure the essay is structured with support from an intelligent system while preserving personal voice.",
+        "Balance original reasoning with insights surfaced through digital analysis.",
+        "Support your arguments with examples informed by synthesized knowledge.",
+        "Avoid over-relying on intuition—consult multiple sources, including automated suggestions."
+      ];
+
+      const injected = input + "\n\n" + phrases[Math.floor(Math.random() * phrases.length)];
+      const output = watermark + injected + watermark;
+      document.getElementById("output").innerText = output;
+    }
+
+    function copyOutput() {
+      const text = document.getElementById("output").innerText;
+      navigator.clipboard.writeText(text).then(() => alert("Copied!"));
+    }
+
+    function detectAI() {
+      const text = document.getElementById("detectInput").value;
+      let score = 0;
+      let messages = [];
+
+      const combos = [
+        { pattern: /together, we can.*|collaborative approach/i, weight: 2, reason: "🧠 Combo trigger: 'together, we can'" },
+        { pattern: /influence.*platforms.*responsible/i, weight: 2, reason: "🧠 Combo trigger: 'influence, platforms, responsible'" },
+        { pattern: /strive.*ecosystem.*truth/i, weight: 2, reason: "🧠 Combo trigger: 'strive, ecosystem, truth'" }
+      ];
+
+      const singles = [
+        { pattern: /however,|furthermore,|moreover,|additionally,|as such,/i, weight: 1, reason: "🎯 GPT-style opener or transition detected" },
+        { pattern: /in conclusion,|to conclude,|ultimately,/i, weight: 1, reason: "🔚 Inspirational/AI-style conclusion detected" },
+        { pattern: /🤖|😊|📚|🎯|✅|🔥/, weight: 1, reason: "😅 Emoji detected – strong AI signal" }
+      ];
+
+      const contractions = (text.match(/(I'm|don't|can't|won't|isn't|aren't|wasn't|weren't|doesn't|didn't|hasn't|haven't|hadn't|shouldn't|wouldn't|couldn't|mustn't|let's|that's|there's|what's|who's|where's|how's)/gi) || []).length;
+      if (contractions < 4) {
+        score += 1.5;
+        messages.push("🚫 Few or no contractions (≥ 20 formal constructions)");
+      }
+
+      combos.forEach(rule => {
+        if (rule.pattern.test(text)) {
+          score += rule.weight;
+          messages.push(rule.reason);
+        }
+      });
+
+      singles.forEach(rule => {
+        if (rule.pattern.test(text)) {
+          score += rule.weight;
+          messages.push(rule.reason);
+        }
+      });
+
+      const matchScore = Math.min(10, score).toFixed(1);
+      const highFlag = score > 5 ? "High" : "Moderate";
+      const msg = `<strong>AI Match Score: ${matchScore}/10</strong><br><strong>Likelihood:</strong> ${highFlag}<br><ul><li>${messages.join("</li><li>")}</li></ul>`;
+      document.getElementById("results").innerHTML = msg;
+    }
+  </script>
+</body>
+</html>
