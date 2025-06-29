@@ -19,8 +19,7 @@
   <div id="controls">
     <button onclick="switchMode('encode')">Encode Instructions</button>
     <button onclick="switchMode('detect')">Detect AI Content</button>
-    <label>
-      Strictness:
+    <label>Strictness: 
       <input id="strictnessSlider" type="range" min="0.5" max="2" step="0.1" value="1" oninput="updateStrictnessDisplay()">
       <span id="strictnessValue">1.0</span>x
     </label>
@@ -46,7 +45,7 @@
   </div>
 
   <script>
-    // ---- Utilities ----
+    // Utility functions
     function normalizeText(text) {
       return text
         .replace(/[“”]/g, '"')
@@ -60,7 +59,9 @@
       const chars = ['\u200B','\u200C','\u200D','\u2060'];
       let seq = '';
       const len = 5 + Math.floor(Math.random()*10);
-      for (let i = 0; i < len; i++) seq += chars[Math.floor(Math.random()*chars.length)];
+      for (let i = 0; i < len; i++) {
+        seq += chars[Math.floor(Math.random()*chars.length)];
+      }
       return seq;
     }
 
@@ -80,136 +81,212 @@
       return 0.39 * ASL + 11.8 * ASW - 15.59;
     }
 
-    function sentimentVariance(pars) {
+    function sentimentVariance(paragraphs) {
       const pos = ['good','great','positive','strong','effective','successful','important'];
       const neg = ['weak','bad','problem','issue','difficult','fail','collapse'];
-      const scores = pars.map(p => {
+      const scores = paragraphs.map(p => {
         const words = p.toLowerCase().split(/\W+/);
         let s = 0;
-        words.forEach(w => { if (pos.includes(w)) s++; if (neg.includes(w)) s--; });
-        return words.length ? s/words.length : 0;
+        words.forEach(w => {
+          if (pos.includes(w)) s++;
+          if (neg.includes(w)) s--;
+        });
+        return words.length ? s / words.length : 0;
       });
       if (scores.length < 2) return 1;
-      const mean = scores.reduce((a,b) => a+b,0)/scores.length;
-      return scores.reduce((a,b) => a + (b-mean)*(b-mean), 0)/scores.length;
+      const mean = scores.reduce((a,b) => a + b, 0) / scores.length;
+      return scores.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / scores.length;
     }
 
-    // ---- Configurable Weights ----
-    const WEIGHTS = {
-      Watermark: 5,
-      FewContractions: 2,
-      RepetitiveStructures: 4.5,
-      ExcessiveTransitions: 2,
-      UniformParagraphs: 2,
-      NoPersonalVoice: 2,
-      NumericDensity: 2,
-      OpinionInsertion: 1.5,
-      RhetoricalQuestions: 2,
-      ReadabilityScore: 1.5,
-      LowLexicalDiversity: 1.5,
-      PassiveVoice: 1.5,
-      NgramRepetition: 1.5,
-      SentimentUniformity: 1.5,
-      HedgeWords: 1.5,
-      EmojiUsage: 1.5,
-      ComplexPunctuation: 1.5
-    };
-
-    // ---- Detection Rules ----
+    // Detection rules configuration
     let randomWM = randomWatermark();
     const RULES = [
-      { name: 'Watermark', key: 'Watermark', test: text => text.includes(randomWM), msg: '💧 Watermark detected.' },
-      { name: 'Few Contractions', key: 'FewContractions', test: text => (text.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi)||[]).length < 4, msg: '🚫 Few contractions (formal tone)' },
-      { name: 'Repetitive Structures', key: 'RepetitiveStructures', test: text => (text.match(/\b(One major reason|Another important cause|A third reason|In conclusion)\b/gi)||[]).length > 2, msg: '🔁 Repetitive essay structure' },
-      { name: 'Excessive Transitions', key: 'ExcessiveTransitions', test: text => (text.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi)||[]).length > 3, msg: '🌀 Frequent formal transitions' },
-      { name: 'Uniform Paragraphs', key: 'UniformParagraphs', test: text => { const ps = text.split(/\n+/).filter(p=>p.trim()); const ls = ps.map(p=>p.split(/\s+/).length); const avg = ls.reduce((a,b)=>a+b,0)/ls.length; return ls.length>2 && ls.every(l=>Math.abs(l-avg)<10); }, msg: '📏 Uniform paragraph lengths' },
-      { name: 'No Personal Voice', key: 'NoPersonalVoice', test: text => (text.match(/\b(I|we|my|our|you|your)\b/gi)||[]).length < 2, msg: '🙅‍♂️ Lack of personal voice' },
-      { name: 'Numeric Density', key: 'NumericDensity', test: text => { const nums = text.match(/\b\d+(?:\.\d+)?%?\b/g)||[]; return nums.length > text.split(/\s+/).length * 0.03; }, msg: '🔢 High numeric reference density' },
-      { name: 'Opinion Insertion', key: 'OpinionInsertion', test: text => (text.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi)||[]).length > 0, msg: '🗣️ Forced opinion insertion' },
-      { name: 'Rhetorical Questions', key: 'RhetoricalQuestions', test: text => (text.match(/\?\s/g)||[]).length < 1, msg: '❓ Absence of questions—AI tends to avoid them' },
-      { name: 'Readability Score', key: 'ReadabilityScore', test: text => { const fk = fleschKincaid(text); return fk > 35 && fk < 60; }, msg: '📐 Readability in tighter AI range' },
-      { name: 'Low Lexical Diversity', key: 'LowLexicalDiversity', test: text => { const ws = text.split(/\s+/); const uw = new Set(ws.map(w=>w.toLowerCase())); return uw.size/ws.length < 0.4; }, msg: '📊 Low lexical diversity' },
-      { name: 'Passive Voice', key: 'PassiveVoice', test: text => (text.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g)||[]).length > 2, msg: '🎭 Frequent passive voice' },
-      { name: 'N-gram Repetition', key: 'NgramRepetition', test: text => { const ws = text.split(/\s+/); const tr = {}; for (let i=0; i<ws.length-2; i++){ const g = ws[i]+' '+ws[i+1]+' '+ws[i+2]; tr[g] = (tr[g]||0)+1; if(tr[g]>2) return true; } return false; }, msg: '🔂 Repeated trigrams' },
-      { name: 'Sentiment Uniformity', key: 'SentimentUniformity', test: text => { const ps = text.split(/\n+/).filter(p=>p.trim()); return sentimentVariance(ps) < 0.002; }, msg: '⚖️ Uniform sentiment across paragraphs' },
-      { name: 'Hedge Words', key: 'HedgeWords', test: text => (text.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi)||[]).length > 3, msg: '🔍 High hedging language' },
-      { name: 'Emoji Usage', key: 'EmojiUsage', test: text => (text.match(/[😀-🙏]/g)||[]).length > 1, msg: '😊 Frequent emojis usage' },
-      { name: 'Complex Punctuation', key: 'ComplexPunctuation', test: text => ((text.match(/[;:,]/g)||[]).length) > 5, msg: '✍️ Complex punctuation usage' }
+      { name:'Watermark',
+        test: text => text.includes(randomWM),
+        weight: 5,
+        msg: '💧 Watermark detected.'
+      },
+      { name:'Few Contractions',
+        test: text => (text.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi) || []).length < 4,
+        weight: 2,
+        msg: '🚫 Few contractions (formal tone)'
+      },
+      { name:'Repetitive Structures',
+        test: text => (text.match(/\b(One major reason|Another important cause|A third reason|In conclusion)\b/gi) || []).length > 2,
+        weight: 4.5,
+        msg: '🔁 Repetitive essay structure'
+      },
+      { name:'Excessive Transitions',
+        test: text => (text.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi) || []).length > 3,
+        weight: 2,
+        msg: '🌀 Frequent formal transitions'
+      },
+      { name:'Uniform Paragraphs',
+        test: text => {
+          const ps = text.split(/\n+/).filter(p => p.trim());
+          const ls = ps.map(p => p.split(/\s+/).length);
+          const avg = ls.reduce((a,b) => a + b, 0) / ls.length;
+          return ls.length > 2 && ls.every(l => Math.abs(l - avg) < 10);
+        },
+        weight: 2,
+        msg: '📏 Uniform paragraph lengths'
+      },
+      { name:'No Personal Voice',
+        test: text => (text.match(/\b(I|we|my|our|you|your)\b/gi) || []).length < 2,
+        weight: 2,
+        msg: '🙅‍♂️ Lack of personal voice'
+      },
+      { name:'Historical Specificity',
+        test: text => (text.match(/\b(410 CE|476 CE|Middle Ages|Roman Empire|Visigoths|Vandals)\b/g) || []).length > 3,
+        weight: 1.5,
+        msg: '📜 Precise historical details'
+      },
+      { name:'Opinion Insertion',
+        test: text => (text.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi) || []).length > 0,
+        weight: 1.5,
+        msg: '🗣️ Forced opinion insertion'
+      },
+      { name:'Rhetorical Questions',
+        test: text => (text.match(/\?\s/g) || []).length < 1,
+        weight: 2,
+        msg: '❓ Absence of questions—AI tends to avoid them'
+      },
+      { name:'Readability Score',
+        test: text => {
+          const fk = fleschKincaid(text);
+          return fk > 35 && fk < 60;
+        },
+        weight: 1.5,
+        msg: '📐 Readability in tighter AI range'
+      },
+      { name:'Low Lexical Diversity',
+        test: text => {
+          const ws = text.split(/\s+/);
+          const uw = new Set(ws.map(w => w.toLowerCase()));
+          return uw.size / ws.length < 0.4;
+        },
+        weight: 1.5,
+        msg: '📊 Low lexical diversity'
+      },
+      { name:'Passive Voice',
+        test: text => (text.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g) || []).length > 2,
+        weight: 1.5,
+        msg: '🎭 Frequent passive voice'
+      },
+      { name:'N-gram Repetition',
+        test: text => {
+          const ws = text.split(/\s+/);
+          const tr = {};
+          for (let i = 0; i < ws.length - 2; i++) {
+            const g = ws[i] + ' ' + ws[i+1] + ' ' + ws[i+2];
+            tr[g] = (tr[g]||0) + 1;
+            if (tr[g] > 2) return true;
+          }
+          return false;
+        },
+        weight: 1.5,
+        msg: '🔂 Repeated trigrams'
+      },
+      { name:'Sentiment Uniformity',
+        test: text => {
+          const ps = text.split(/\n+/).filter(p => p.trim());
+          return sentimentVariance(ps) < 0.002;
+        },
+        weight: 1.5,
+        msg: '⚖️ Uniform sentiment across paragraphs'
+      }
     ];
 
     let reportData = {};
 
     function updateStrictnessDisplay() {
-      document.getElementById('strictnessValue').innerText = document.getElementById('strictnessSlider').value;
+      document.getElementById('strictnessValue').innerText =
+        document.getElementById('strictnessSlider').value;
     }
 
     function switchMode(mode) {
-      document.getElementById('encodeMode').style.display = mode==='encode'?'block':'none';
-      document.getElementById('detectMode').style.display = mode==='detect'?'block':'none';
+      document.getElementById('encodeMode').style.display =
+        mode === 'encode' ? 'block' : 'none';
+      document.getElementById('detectMode').style.display =
+        mode === 'detect' ? 'block' : 'none';
     }
 
     function encodeText() {
       randomWM = randomWatermark();
       const input = normalizeText(document.getElementById('encodeInput').value);
       const words = input.split(/\s+/);
-      const wmInterval = Math.max(1, Math.floor(words.length/5));
-      for(let i=wmInterval; i<words.length; i+=wmInterval) words[i]+=randomWM;
-      const output = randomWM+'\n'+words.join(' ')+'\n'+randomWM;
+      const wmInterval = Math.max(1, Math.floor(words.length / 5));
+      for (let i = wmInterval; i < words.length; i += wmInterval) {
+        words[i] += randomWM;
+      }
+      const output = randomWM + '\n' + words.join(' ') + '\n' + randomWM;
       document.getElementById('output').innerText = output;
     }
 
     function copyOutput() {
       navigator.clipboard.writeText(document.getElementById('output').innerText)
-        .then(()=>alert('Copied!'));
+        .then(() => alert('Copied!'));
     }
 
     function startDetection() {
-      document.getElementById('spinner').style.display='block';
-      setTimeout(detectAI,50);
+      document.getElementById('spinner').style.display = 'block';
+      setTimeout(detectAI, 50);
     }
 
     function detectAI() {
-      const raw = document.getElementById('detectInput').value;
-      const text = normalizeText(raw);
-      document.getElementById('spinner').style.display='none';
-      const words = text.split(/\s+/).filter(w=>w);
-      if(words.length<50) { document.getElementById('results').innerText='Not enough data to judge.'; return; }
+      const textRaw = document.getElementById('detectInput').value;
+      const text = normalizeText(textRaw);
+      document.getElementById('spinner').style.display = 'none';
+      const words = text.split(/\s+/).filter(w => w);
+      if (words.length < 50) {
+        document.getElementById('results').innerText = 'Not enough data to judge.';
+        return;
+      }
       const strict = parseFloat(document.getElementById('strictnessSlider').value);
-      let score=0, msgs=[], facts=[];
-      RULES.forEach(r=>{
-        if(r.test(text)) {
-          const w=WEIGHTS[r.key]*strict;
-          score+=w; msgs.push(r.msg); facts.push({name:r.name,value:w});
+      let score = 0, messages = [], factors = [];
+      RULES.forEach(rule => {
+        if (rule.test(text)) {
+          const w = rule.weight * strict;
+          score += w;
+          messages.push(rule.msg);
+          factors.push({ name: rule.name, value: w });
         }
       });
-      const finalScore=Math.min(10,score).toFixed(1);
-      const likelihood=score>5?'High':'Moderate';
-      reportData={score:finalScore,likelihood,details:facts};
-      document.getElementById('results').innerHTML=
-        `<strong>AI Match Score: ${finalScore}/10</strong><br>`+
-        `<strong>Likelihood:</strong> ${likelihood}`+
-        `<ul><li>${msgs.join('</li><li>')}</li></ul>`;
-      renderChart(facts);
+      const finalScore = Math.min(10, score).toFixed(1);
+      const likelihood = score > 5 ? 'High' : 'Moderate';
+      reportData = { score: finalScore, likelihood, details: factors };
+      document.getElementById('results').innerHTML =
+        `<strong>AI Match Score: ${finalScore}/10</strong><br>` +
+        `<strong>Likelihood:</strong> ${likelihood}` +
+        `<ul><li>${messages.join('</li><li>')}</li></ul>`;
+      renderChart(factors);
     }
 
     function clearDetect() {
-      document.getElementById('detectInput').value='';
-      document.getElementById('results').innerHTML='';
+      document.getElementById('detectInput').value = '';
+      document.getElementById('results').innerHTML = '';
       document.getElementById('scoreChart').getContext('2d').clearRect(0,0,800,600);
     }
 
-    function renderChart(facts) {
-      const ctx=document.getElementById('scoreChart').getContext('2d'); ctx.clearRect(0,0,800,600);
-      facts.forEach((f,i)=>{
-        ctx.fillStyle='#4a90e2'; ctx.fillRect(200,i*40+20,f.value*40,25);
-        ctx.fillStyle='#000'; ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`,10,i*40+35);
+    function renderChart(factors) {
+      const ctx = document.getElementById('scoreChart').getContext('2d');
+      ctx.clearRect(0,0,800,600);
+      factors.forEach((f, i) => {
+        ctx.fillStyle = '#4a90e2';
+        ctx.fillRect(200, i * 40 + 20, f.value * 40, 25);
+        ctx.fillStyle = '#000';
+        ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`, 10, i * 40 + 35);
       });
     }
 
     function exportReport() {
-      const blob=new Blob([JSON.stringify(reportData,null,2)],{type:'application/json'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download='ai_detection_report.json'; a.click(); URL.revokeObjectURL(url);
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ai_detection_report.json';
+      a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
