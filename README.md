@@ -90,7 +90,8 @@ const WEIGHTS = {
   HedgeWords: 1.5,
   EmojiUsage: 1.5,
   ComplexPunctuation: 1.5
-};```
+};
+```
 
 - To adjust sensitivity, change any value here.  
   - Strictness slider multiplies all of these by 0.5×–2× at runtime.
