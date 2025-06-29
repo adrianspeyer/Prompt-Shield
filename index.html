@@ -5,6 +5,7 @@
   <title>PromptShield – Advanced AI Detection & Encoding Tool</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 20px; padding: 20px; }
+    #debug { white-space: pre-wrap; color: red; margin-bottom: 10px; }
     textarea { width: 100%; height: 200px; font-size: 14px; padding: 10px; }
     button { padding: 10px 20px; margin: 10px 5px 0 0; font-size: 16px; cursor: pointer; }
     #output, #results { background: #fff; padding: 15px; margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; white-space: pre-wrap; }
@@ -15,13 +16,18 @@
   </style>
 </head>
 <body onload="updateStrictnessDisplay()">
+
+  <!-- Debug console -->
+  <div id="debug">JS debug output will appear here</div>
+
   <h1>PromptShield – Advanced AI Detection & Encoding Tool</h1>
   <div id="controls">
     <button onclick="switchMode('encode')">Encode Instructions</button>
     <button onclick="switchMode('detect')">Detect AI Content</button>
     <label>
       Strictness:
-      <input id="strictnessSlider" type="range" min="0.5" max="2" step="0.1" value="1" oninput="updateStrictnessDisplay()">
+      <input id="strictnessSlider" type="range" min="0.5" max="2" step="0.1" value="1"
+             oninput="updateStrictnessDisplay()">
       <span id="strictnessValue">1.0</span>x
     </label>
   </div>
@@ -46,6 +52,17 @@
   </div>
 
   <script>
+    // Global error handler
+    window.onerror = function(message, source, lineno, colno, error) {
+      const debug = document.getElementById('debug');
+      debug.textContent += `Error: ${message} at ${source}:${lineno}:${colno}\n`;
+      return true;  // prevent console error
+    };
+    window.onunhandledrejection = function(evt) {
+      document.getElementById('debug').textContent +=
+        `Promise reject: ${evt.reason}\n`;
+    };
+
     // ---- Utilities ----
     function normalizeText(text) {
       return text.replace(/[“”]/g,'"')
@@ -56,7 +73,8 @@
     }
     function randomWatermark() {
       const chars = ['\u200B','\u200C','\u200D','\u2060'];
-      let seq = '', len = 5 + Math.floor(Math.random()*10);
+      let seq = '';
+      const len = 5 + Math.floor(Math.random()*10);
       for (let i=0; i<len; i++) seq += chars[Math.floor(Math.random()*chars.length)];
       return seq;
     }
@@ -89,23 +107,23 @@
 
     // ---- Configurable Weights ----
     const WEIGHTS = {
-      Watermark:           5,
-      FewContractions:     2,
-      RepetitiveStructures:4.5,
-      ExcessiveTransitions:2,
-      UniformParagraphs:   2,
-      NoPersonalVoice:     2,
-      NumericDensity:      2,
-      OpinionInsertion:    1.5,
+      Watermark: 5,
+      FewContractions: 2,
+      RepetitiveStructures: 4.5,
+      ExcessiveTransitions: 2,
+      UniformParagraphs: 2,
+      NoPersonalVoice: 2,
+      NumericDensity: 2,
+      OpinionInsertion: 1.5,
       RhetoricalQuestions: 2,
-      ReadabilityScore:    1.5,
+      ReadabilityScore: 1.5,
       LowLexicalDiversity: 1.5,
-      PassiveVoice:        1.5,
-      NgramRepetition:     1.5,
+      PassiveVoice: 1.5,
+      NgramRepetition: 1.5,
       SentimentUniformity: 1.5,
-      HedgeWords:          1.5,
-      EmojiUsage:          1.5,
-      ComplexPunctuation:  1.5
+      HedgeWords: 1.5,
+      EmojiUsage: 1.5,
+      ComplexPunctuation: 1.5
     };
 
     // ---- Detection Rules ----
@@ -115,9 +133,8 @@
       { key:'FewContractions',      test:t=>(t.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi)||[]).length<4,   msg:'🚫 Few contractions' },
       { key:'RepetitiveStructures', test:t=>(t.match(/\b(One major reason|Another cause|A third reason|In conclusion)\b/gi)||[]).length>2, msg:'🔁 Repetitive structure' },
       { key:'ExcessiveTransitions', test:t=>(t.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi)||[]).length>3, msg:'🌀 Excessive transitions' },
-      { key:'UniformParagraphs',     test:t=>{const ps=t.split(/\n+/).filter(p=>p.trim()),ls=ps.map(p=>p.split(/\s+/).length),avg=ls.reduce((a,b)=>a+b,0)/ls.length;return ls.length>2&&ls.every(l=>Math.abs(l-avg)<10);}, msg:'📏 Uniform paragraphs' },
+      { key:'UniformParagraphs',     test:t=>{ const ps=t.split(/\n+/).filter(p=>p.trim()), ls=ps.map(p=>p.split(/\s+/).length), avg=ls.reduce((a,b)=>a+b,0)/ls.length; return ls.length>2&&ls.every(l=>Math.abs(l-avg)<10); }, msg:'📏 Uniform paragraphs' },
       { key:'NoPersonalVoice',      test:t=>(t.match(/\b(I|we|my|our|you|your)\b/gi)||[]).length<2,                  msg:'🙅‍♂️ No personal voice' },
-      // **Here’s the fixed comma** after this block:
       { key:'NumericDensity',       test:t=>{const nums=t.match(/\b\d+(\.\d+)?%?\b/g)||[];return nums.length>t.split(/\s+/).length*0.03;}, msg:'🔢 High numeric density' },
       { key:'OpinionInsertion',     test:t=>(t.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi)||[]).length>0, msg:'🗣️ Opinion insertion' },
       { key:'RhetoricalQuestions',  test:t=>(t.match(/\?\s/g)||[]).length<1,                                    msg:'❓ No questions' },
@@ -128,7 +145,7 @@
       { key:'SentimentUniformity',  test:t=>{const ps=t.split(/\n+/).filter(p=>p.trim());return sentimentVariance(ps)<0.002;}, msg:'⚖️ Uniform sentiment' },
       { key:'HedgeWords',           test:t=>(t.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi)||[]).length>3, msg:'🔍 Hedge words' },
       { key:'EmojiUsage',           test:t=>(t.match(/[😀-🙏]/g)||[]).length>1,                                  msg:'😊 Emoji usage' },
-      { key:'ComplexPunctuation',   test:t=>(t.match(/[;:,]/g)||[]).length>5,                                   msg:'✍️ Complex punctuation' }
+      { key:'ComplexPunctuation',   test:t=>(t.match(/[;:,]/g)||[]).length>5,                                   msg:'✍️ Complex punctuation usage' }
     ];
 
     let reportData = {};
@@ -188,13 +205,13 @@
         `<strong>AI Score: ${finalScore}/10</strong><br>`+
         `<strong>Likely:</strong> ${like}`+
         `<ul><li>${m.join('</li><li>')}</li></ul>`;
-      const c=document.getElementById('scoreChart').getContext('2d');
-      c.clearRect(0,0,800,600);
+      const cctx = document.getElementById('scoreChart').getContext('2d');
+      cctx.clearRect(0,0,800,600);
       d.forEach((f,i)=>{
-        c.fillStyle='#4a90e2';
-        c.fillRect(200,i*40+20,f.value*40,25);
-        c.fillStyle='#000';
-        c.fillText(f.name+': '+f.value.toFixed(1),10,i*40+35);
+        cctx.fillStyle='#4a90e2';
+        cctx.fillRect(200,i*40+20,f.value*40,25);
+        cctx.fillStyle='#000';
+        cctx.fillText(f.name+': '+f.value.toFixed(1),10,i*40+35);
       });
     }
     function clearDetect() {
