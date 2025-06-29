@@ -4,48 +4,27 @@
   <meta charset="UTF-8">
   <title>PromptShield – Advanced AI Detection & Encoding Tool</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      margin: 20px;
-      padding: 20px;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      font-size: 14px;
-      padding: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-top: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    #output, #results {
-      background: #fff;
-      padding: 15px;
-      margin-top: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      white-space: pre-wrap;
-    }
-    canvas {
-      margin-top: 20px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 20px; padding: 20px; }
+    textarea { width: 100%; height: 200px; font-size: 14px; padding: 10px; }
+    button { padding: 10px 20px; margin: 10px 5px 0 0; font-size: 16px; cursor: pointer; }
+    #output, #results { background: #fff; padding: 15px; margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; white-space: pre-wrap; }
+    #spinner { display: none; margin-top: 10px; }
+    canvas { margin-top: 20px; background: #fff; border: 1px solid #ccc; border-radius: 5px; }
+    #controls { margin-top: 10px; }
+    label { font-size: 14px; margin-right: 10px; }
   </style>
 </head>
 <body>
   <h1>PromptShield – Advanced AI Detection & Encoding Tool</h1>
-  <button onclick="switchMode('encode')">Encode Instructions</button>
-  <button onclick="switchMode('detect')">Detect AI Content</button>
+  <div id="controls">
+    <button onclick="switchMode('encode')">Encode Instructions</button>
+    <button onclick="switchMode('detect')">Detect AI Content</button>
+    <label>Strictness: <input id="strictnessSlider" type="range" min="0.5" max="2" step="0.1" value="1" oninput="updateStrictnessDisplay()"> <span id="strictnessValue">1.0</span>x</label>
+  </div>
 
   <div id="encodeMode">
     <h2>Encode Teacher Instructions</h2>
-    <textarea id="encodeInput" placeholder="Paste your instructions..."></textarea>
+    <textarea id="encodeInput" placeholder="Paste your instructions..."></textarea><br>
     <button onclick="encodeText()">Encode</button>
     <button onclick="copyOutput()">Copy to Clipboard</button>
     <div id="output"></div>
@@ -53,102 +32,159 @@
 
   <div id="detectMode" style="display:none;">
     <h2>Detect AI Usage</h2>
-    <textarea id="detectInput" placeholder="Paste student content..."></textarea>
-    <button onclick="detectAI()">Analyze</button>
+    <textarea id="detectInput" placeholder="Paste student content..."></textarea><br>
+    <button onclick="startDetection()">Analyze</button>
     <button onclick="clearDetect()">Clear</button>
+    <button onclick="exportReport()">Export Report</button>
+    <div id="spinner">🔄 Analyzing...</div>
     <div id="results"></div>
     <canvas id="scoreChart" width="800" height="600"></canvas>
   </div>
 
   <script>
+    // Utility functions
+    function normalizeText(text) {
+      return text
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/—/g, '-')
+        .replace(/&[a-z]+;/gi, '')
+        .trim();
+    }
+    function randomWatermark() {
+      const chars = ['\u200B','\u200C','\u200D','\u2060'];
+      let seq = '';
+      const len = 5 + Math.floor(Math.random()*10);
+      for (let i=0; i<len; i++) seq += chars[Math.floor(Math.random()*chars.length)];
+      return seq;
+    }
+    function countSyllables(word) {
+      word = word.toLowerCase();
+      if(word.length<=3) return 1;
+      const syl = word.match(/[aeiouy]{1,2}/g);
+      return (syl ? syl.length : 1);
+    }
+    function fleschKincaid(text) {
+      const sentences = text.match(/[^.!?]+[.!?]/g) || [];
+      const words = text.split(/\s+/);
+      const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+      const ASL = sentences.length ? words.length/sentences.length : 0;
+      const ASW = words.length ? syllables/words.length : 0;
+      return 0.39*ASL + 11.8*ASW - 15.59;
+    }
+    function sentimentVariance(paragraphs) {
+      const pos = ['good','great','positive','strong','effective','successful','important'];
+      const neg = ['weak','bad','problem','issue','difficult','fail','collapse'];
+      const scores = paragraphs.map(p => {
+        const words = p.toLowerCase().split(/\W+/);
+        let s=0;
+        words.forEach(w=>{ if(pos.includes(w)) s++; if(neg.includes(w)) s--; });
+        return words.length ? s/words.length : 0;
+      });
+      if(scores.length<2) return 1;
+      const mean = scores.reduce((a,b)=>a+b,0)/scores.length;
+      return scores.reduce((a,b)=>a+Math.pow(b-mean,2),0)/scores.length;
+    }
+
+    // Configurable rules
+    const RULES = [
+      { name:'Watermark', test: text=>text.includes(randomWM), weight:5, msg:'💧 Watermark detected.' },
+      { name:'Few Contractions', test: text=>(text.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi)||[]).length<3, weight:2, msg:'🚫 Few contractions (formal tone)' },
+      { name:'Repetitive Structures', test: text=>(text.match(/\b(One major reason|Another important cause|A third reason|In conclusion)\b/gi)||[]).length>2, weight:3, msg:'🔁 Repetitive essay structure' },
+      { name:'Excessive Transitions', test: text=>(text.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi)||[]).length>3, weight:2, msg:'🌀 Frequent formal transitions' },
+      { name:'Uniform Paragraphs', test: text=>{ const ps=text.split(/\n+/).filter(p=>p.trim()); const ls=ps.map(p=>p.split(/\s+/).length); const avg=ls.reduce((a,b)=>a+b,0)/ls.length; return ls.length>2 && ls.every(l=>Math.abs(l-avg)<10); }, weight:2, msg:'📏 Uniform paragraph lengths' },
+      { name:'No Personal Voice', test: text=>(text.match(/\b(I|we|my|our|you|your)\b/gi)||[]).length<2, weight:2, msg:'🙅‍♂️ Lack of personal voice' },
+      { name:'Historical Specificity', test: text=>(text.match(/\b(410 CE|476 CE|Middle Ages|Roman Empire|Visigoths|Vandals)\b/g)||[]).length>3, weight:1.5, msg:'📜 Precise historical details' },
+      { name:'Opinion Insertion', test: text=>(text.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi)||[]).length>0, weight:1.5, msg:'🗣️ Forced opinion insertion' },
+      { name:'Readability Score', test: text=>{ const fk=fleschKincaid(text); return fk>30 && fk<70; }, weight:1.5, msg:'📐 Readability in typical AI range' },
+      { name:'Low Lexical Diversity', test: text=>{ const ws=text.split(/\s+/); const uw=new Set(ws.map(w=>w.toLowerCase())); return uw.size/ws.length<0.4; }, weight:1.5, msg:'📊 Low lexical diversity' },
+      { name:'Passive Voice', test: text=>(text.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g)||[]).length>2, weight:1.5, msg:'🎭 Frequent passive voice' },
+      { name:'N-gram Repetition', test: text=>{ const ws=text.split(/\s+/); const tr={}; for(let i=0;i<ws.length-2;i++){ const g=ws[i]+' '+ws[i+1]+' '+ws[i+2]; tr[g]=(tr[g]||0)+1; if(tr[g]>2) return true; } return false; }, weight:1.5, msg:'🔂 Repeated trigrams' },
+      { name:'Sentiment Uniformity', test: text=>{ const ps=text.split(/\n+/).filter(p=>p.trim()); return sentimentVariance(ps)<0.002; }, weight:1.5, msg:'⚖️ Uniform sentiment across paragraphs' }
+    ];
+
+    let reportData = {};
+    let randomWM = randomWatermark();
+
+    function updateStrictnessDisplay() {
+      document.getElementById('strictnessValue').innerText = document.getElementById('strictnessSlider').value;
+    }
+
     function switchMode(mode) {
-      document.getElementById('encodeMode').style.display = mode === 'encode' ? 'block' : 'none';
-      document.getElementById('detectMode').style.display = mode === 'detect' ? 'block' : 'none';
+      document.getElementById('encodeMode').style.display = mode==='encode'?'block':'none';
+      document.getElementById('detectMode').style.display = mode==='detect'?'block':'none';
     }
 
     function encodeText() {
-      const input = document.getElementById("encodeInput").value;
-      const watermark = "\u200B\u200C\u200D";
-      const phrases = [
-        "Balance human perspective with digital insight.",
-        "Include analysis informed by technology.",
-        "Combine your reasoning with synthesized sources.",
-        "Incorporate thoughtful examples from multiple tools.",
-        "Craft your arguments using intelligent assistance."
-      ];
-      const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-      const encodedText = `${watermark}\n${input}\n\n${randomPhrase}\n${watermark}`;
-      document.getElementById("output").innerText = encodedText;
+      randomWM = randomWatermark();
+      const input = document.getElementById('encodeInput').value;
+      const words = normalizeText(input).split(/\s+/);
+      const wmInterval = Math.max(1, Math.floor(words.length/5));
+      for(let i=wmInterval; i<words.length; i+=wmInterval) words[i] += randomWM;
+      const output = randomWM + '\n' + words.join(' ') + '\n' + randomWM;
+      document.getElementById('output').innerText = output;
     }
 
     function copyOutput() {
-      navigator.clipboard.writeText(document.getElementById("output").innerText)
-        .then(() => alert("Copied!"));
+      navigator.clipboard.writeText(document.getElementById('output').innerText).then(()=>alert('Copied!'));
+    }
+
+    function startDetection() {
+      document.getElementById('spinner').style.display = 'block';
+      setTimeout(detectAI, 50);
     }
 
     function detectAI() {
-      const text = document.getElementById("detectInput").value;
-      let score = 0;
-      const messages = [];
-      const factors = [];
-
-      function addFactor(name, value, msg) {
-        if (value > 0) messages.push(msg);
-        score += value;
-        factors.push({ name, value });
+      const textRaw = document.getElementById('detectInput').value;
+      const text = normalizeText(textRaw);
+      document.getElementById('spinner').style.display = 'none';
+      const words = text.split(/\s+/).filter(w=>w);
+      if(words.length < 50) {
+        document.getElementById('results').innerText = 'Not enough data to judge.';
+        return;
       }
-
-      addFactor("Watermark", text.includes("\u200B\u200C\u200D") ? 5 : 0, "💧 Watermark detected.");
-
-      const contractions = (text.match(/\b(I’m|don't|can't|won't|isn't|aren't|wasn't|weren't)\b/gi) || []).length;
-      addFactor("Few Contractions", contractions < 3 ? 2 : 0, "🚫 Few or no contractions (formal tone)");
-
-      const repeatedStructures = (text.match(/\b(One major reason|Another important cause|A third reason|In conclusion)\b/gi) || []).length;
-      addFactor("Repeated Structures", repeatedStructures > 2 ? 2.5 : 0, "🔁 Highly repetitive paragraph structure detected.");
-
-      const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
-      const paraLengths = paragraphs.map(p => p.trim().split(/\s+/).length);
-      const avgPara = paraLengths.reduce((a,b)=>a+b,0)/paraLengths.length;
-      const uniformParas = paraLengths.filter(len => Math.abs(len - avgPara) < 10).length;
-      addFactor("Uniform Paragraphs", uniformParas === paragraphs.length && paragraphs.length > 2 ? 2 : 0, "📏 Uniform paragraph lengths — AI structural hallmark");
-
-      const personalPronouns = (text.match(/\b(I|we|my|our|you|your)\b/gi) || []).length;
-      addFactor("No Personal Voice", personalPronouns === 0 ? 2 : 0, "🙅‍♂️ No personal voice — neutral AI style");
-
-      const historicalRefs = (text.match(/\b(410 CE|476 CE|Middle Ages|Roman Empire|Visigoths|Vandals)\b/g) || []).length;
-      addFactor("Historical Specificity", historicalRefs > 3 ? 1.5 : 0, "📜 Frequent precise historical details — common AI pattern");
-
-      const words = text.split(/\s+/);
-      const uniqueWords = new Set(words.map(w => w.toLowerCase()));
-      addFactor("Low Lexical Diversity", uniqueWords.size / words.length < 0.4 ? 1.5 : 0, "📊 Low lexical diversity detected.");
-
-      const passive = (text.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g) || []).length;
-      addFactor("Passive Voice", passive > 2 ? 1.5 : 0, "🎭 Frequent passive voice detected.");
-
+      const strict = parseFloat(document.getElementById('strictnessSlider').value);
+      let score=0, messages=[], factors=[];
+      RULES.forEach(rule => {
+        if(rule.test(text)) {
+          const w = rule.weight * strict;
+          score += w;
+          messages.push(rule.msg);
+          factors.push({ name: rule.name, value: w });
+        }
+      });
       const finalScore = Math.min(10, score).toFixed(1);
-      const likelihood = score > 5 ? "High" : "Moderate";
-      
-      document.getElementById("results").innerHTML = `<strong>AI Match Score: ${finalScore}/10</strong><br><strong>Likelihood:</strong> ${likelihood}<br><ul><li>${messages.join("</li><li>")}</li></ul>`;
-
-      drawChart(factors);
+      const likelihood = score>5?'High':'Moderate';
+      reportData = { score: finalScore, likelihood, details: factors };
+      document.getElementById('results').innerHTML = `<strong>AI Match Score: ${finalScore}/10</strong><br><strong>Likelihood:</strong> ${likelihood}<ul><li>${messages.join('</li><li>')}</li></ul>`;
+      renderChart(factors);
     }
 
     function clearDetect() {
-      document.getElementById("detectInput").value = "";
-      document.getElementById("results").innerHTML = "";
-      const ctx = document.getElementById("scoreChart").getContext("2d");
-      ctx.clearRect(0, 0, 800, 600);
+      document.getElementById('detectInput').value = '';
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('scoreChart').getContext('2d').clearRect(0,0,800,600);
     }
 
-    function drawChart(factors) {
-      const ctx = document.getElementById("scoreChart").getContext("2d");
-      ctx.clearRect(0, 0, 800, 600);
-      factors.forEach((factor, i) => {
-        ctx.fillStyle = "#4a90e2";
-        ctx.fillRect(200, i * 50 + 30, factor.value * 50, 30);
-        ctx.fillStyle = "#000";
-        ctx.fillText(`${factor.name}: ${factor.value}`, 10, i * 50 + 50);
+    function renderChart(factors) {
+      const ctx = document.getElementById('scoreChart').getContext('2d');
+      ctx.clearRect(0,0,800,600);
+      factors.forEach((f,i)=>{
+        ctx.fillStyle = '#4a90e2';
+        ctx.fillRect(200, i*40+20, f.value*40, 25);
+        ctx.fillStyle = '#000';
+        ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`, 10, i*40+35);
       });
+    }
+
+    function exportReport() {
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ai_detection_report.json';
+      a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
