@@ -120,26 +120,27 @@
       { key:'HedgeWords', test:t=>(t.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi)||[]).length>3, msg:'🔍 Hedge words' },
       {
         key: 'PunctuationSpacing',
-          invert: true,
-          test: t => {
-            const blocks = t.split(/[\n\.!?]+/).map(b => b.trim()).filter(Boolean);
-            let inconsistentBlocks = 0;
-            blocks.forEach(block => {
-              const totalPeriods = (block.match(/\./g) || []).length;
-              const singleP = (block.match(/\.\s[A-Z]/g) || []).length;
-              const doubleP = (block.match(/\.\s\s[A-Z]/g) || []).length;
-              const totalCommas = (block.match(/,/g) || []).length;
-              const correctC = (block.match(/,\s\w/g) || []).length;
-              const badC = (block.match(/,(?!\s)/g) || []).length;
-        
-              const periodMix = totalPeriods > 2 && singleP / totalPeriods > 0.05 && doubleP / totalPeriods > 0.05;
-              const commaMix = totalCommas > 2 && correctC / totalCommas > 0.05 && badC / totalCommas > 0.05;
-        
-              if (periodMix || commaMix) inconsistentBlocks++;
-            });
-            return inconsistentBlocks >= 1;
-          },
-          msg: '⌛ Multiple blocks with inconsistent spacing suggest human tell'
+        invert: true,
+        test: t => {
+          const blocks = t.split(/[\n\.!?]+/).map(b => b.trim()).filter(Boolean);
+          let inconsistentBlocks = 0;
+          blocks.forEach(block => {
+            const totalPeriods = (block.match(/\./g) || []).length;
+            const singleP = (block.match(/\.\s[A-Z]/g) || []).length;
+            const doubleP = (block.match(/\.\s\s[A-Z]/g) || []).length;
+            const totalCommas = (block.match(/,/g) || []).length;
+            const correctC = (block.match(/,\s\w/g) || []).length;
+            const badC = (block.match(/,(?!\s)/g) || []).length;
+      
+            // Only require totalPeriods > 1 (instead of >2)
+            const periodMix = totalPeriods > 1 && singleP / totalPeriods > 0.05 && doubleP / totalPeriods > 0.05;
+            const commaMix = totalCommas > 1 && correctC / totalCommas > 0.05 && badC / totalCommas > 0.05;
+      
+            if (periodMix || commaMix) inconsistentBlocks++;
+          });
+          return inconsistentBlocks >= 1;
+        },
+        msg: '⌛ Multiple blocks with inconsistent spacing suggest human tell'
         }
     ];
 
