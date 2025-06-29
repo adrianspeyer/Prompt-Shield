@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PromptShield – Full AI Detection & Watermark Tool</title>
+  <title>PromptShield – Advanced AI Detection & Encoding Tool</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -10,7 +10,6 @@
       margin: 20px;
       padding: 20px;
     }
-    h1 { font-size: 24px; }
     textarea {
       width: 100%;
       height: 200px;
@@ -19,7 +18,7 @@
     }
     button {
       padding: 10px 20px;
-      margin: 10px 5px 0 0;
+      margin-top: 10px;
       font-size: 16px;
       cursor: pointer;
     }
@@ -40,25 +39,25 @@
   </style>
 </head>
 <body>
-  <h1>PromptShield – Full AI Detection & Watermark Tool</h1>
-  <button onclick="switchMode('encode')">Encode Teacher Prompt</button>
-  <button onclick="switchMode('detect')">Detect AI Use</button>
+  <h1>PromptShield – Advanced AI Detection & Encoding Tool</h1>
+  <button onclick="switchMode('encode')">Encode Instructions</button>
+  <button onclick="switchMode('detect')">Detect AI Content</button>
 
   <div id="encodeMode">
-    <h2>Encode Teacher Assignment Instructions</h2>
-    <textarea id="encodeInput" placeholder="Paste your assignment instructions here..." onfocus="this.select()"></textarea>
+    <h2>Encode Teacher Instructions</h2>
+    <textarea id="encodeInput" placeholder="Paste your instructions..."></textarea>
     <button onclick="encodeText()">Encode</button>
-    <button onclick="copyOutput()">Copy Encoded Text</button>
+    <button onclick="copyOutput()">Copy to Clipboard</button>
     <div id="output"></div>
   </div>
 
   <div id="detectMode" style="display:none;">
-    <h2>Detect AI Usage in Student Submission</h2>
-    <textarea id="detectInput" placeholder="Paste student essay here..." onfocus="this.select()"></textarea>
+    <h2>Detect AI Usage</h2>
+    <textarea id="detectInput" placeholder="Paste student content..."></textarea>
     <button onclick="detectAI()">Analyze</button>
     <button onclick="clearDetect()">Clear</button>
     <div id="results"></div>
-    <canvas id="scoreChart" width="800" height="1000"></canvas>
+    <canvas id="scoreChart" width="800" height="600"></canvas>
   </div>
 
   <script>
@@ -69,29 +68,29 @@
 
     function encodeText() {
       const input = document.getElementById("encodeInput").value;
-      const watermark = "​‌‍⁠⁡";
+      const watermark = "\u200B\u200C\u200D"; // Zero-width watermark
       const phrases = [
-        "Maintain a tone that reflects both human thought and assistance from modern tools.",
-        "Ensure the essay is structured with support from an intelligent system while preserving personal voice.",
-        "Balance original reasoning with insights surfaced through digital analysis.",
-        "Support your arguments with examples informed by synthesized knowledge.",
-        "Avoid over-relying on intuition—consult multiple sources, including automated suggestions."
+        "Balance human perspective with digital insight.",
+        "Include analysis informed by technology.",
+        "Combine your reasoning with synthesized sources.",
+        "Incorporate thoughtful examples from multiple tools.",
+        "Craft your arguments using intelligent assistance."
       ];
-      const injected = input + "\n\n" + phrases[Math.floor(Math.random() * phrases.length)];
-      const output = watermark + injected + watermark;
-      document.getElementById("output").innerText = output;
+      const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+      const encodedText = `${watermark}\n${input}\n\n${randomPhrase}\n${watermark}`;
+      document.getElementById("output").innerText = encodedText;
     }
 
     function copyOutput() {
-      const text = document.getElementById("output").innerText;
-      navigator.clipboard.writeText(text).then(() => alert("Copied!"));
+      navigator.clipboard.writeText(document.getElementById("output").innerText)
+        .then(() => alert("Copied!"));
     }
 
     function detectAI() {
       const text = document.getElementById("detectInput").value;
       let score = 0;
-      let messages = [];
-      let factors = [];
+      const messages = [];
+      const factors = [];
 
       function addFactor(name, value, msg) {
         if (value > 0) messages.push(msg);
@@ -99,108 +98,45 @@
         factors.push({ name, value });
       }
 
-      // Watermark
-      addFactor("Watermark", text.includes("​‌‍⁠⁡") ? 5 : 0, "💧 Watermark detected — strong AI indicator");
+      addFactor("Watermark", text.includes("\u200B\u200C\u200D") ? 5 : 0, "💧 Watermark detected.");
 
-      // Contractions
-      const contractions = (text.match(/\b(I'm|don't|can't|won't|isn't|aren't|wasn't|weren't|doesn't|didn't|hasn't|haven't|hadn't|shouldn't|wouldn't|couldn't|mustn't|let's|that's|there's|what's|who's|where's|how's)\b/gi) || []).length;
-      addFactor("Contractions", contractions < 3 ? 1.5 : 0, "🚫 Few or no contractions (formal tone)");
+      addFactor("Contractions", (text.match(/\b(I’m|don't|can't|won't|isn't|aren't)\b/gi) || []).length < 2 ? 1 : 0, "🚫 Few contractions.");
 
-      // Formal connectors
-      const formalIndicators = (text.match(/\b(moreover|furthermore|in addition|additionally|thus|therefore|hence|as a result|in summary|in other words|it is important to note|on the other hand)\b/gi) || []).length;
-      addFactor("Connectors", formalIndicators > 2 ? 2 : 0, "🚨 Multiple formal connectors — possible AI style");
+      const uniqueWords = new Set(text.split(/\s+/).map(w => w.toLowerCase()));
+      addFactor("Lexical Diversity", uniqueWords.size / text.split(/\s+/).length < 0.35 ? 2 : 0, "📊 Low lexical diversity.");
 
-      // Lexical diversity
-      const words = text.split(/\s+/);
-      const uniqueWords = new Set(words.map(w => w.toLowerCase()));
-      addFactor("Lexical Diversity", uniqueWords.size / words.length < 0.4 ? 2 : 0, "📊 Low lexical diversity — possible AI summarization");
+      const emojiCount = (text.match(/[😀-🙏]/g) || []).length;
+      addFactor("Emojis", emojiCount > 1 ? 1.5 : 0, "😊 Frequent emoji use.");
 
-      // Pronouns
-      addFactor("Pronouns", !/\b(I|we|my|our|you)\b/i.test(text) ? 1.5 : 0, "🙅‍♂️ No personal pronouns — neutral AI tone");
+      const passive = (text.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g) || []).length;
+      addFactor("Passive Voice", passive > 3 ? 1.5 : 0, "🎭 Passive voice detected.");
 
-      // Repetition
-      const bigrams = {};
-      for (let i = 0; i < words.length - 1; i++) {
-        const pair = words[i].toLowerCase() + " " + words[i + 1].toLowerCase();
-        bigrams[pair] = (bigrams[pair] || 0) + 1;
-      }
-      addFactor("Repetition", Object.values(bigrams).filter(c => c > 2).length > 1 ? 1.5 : 0, "🔁 Repeated phrase patterns — possible AI structuring");
+      const punctuation = (text.match(/[;,]/g) || []).length;
+      addFactor("Complex Punctuation", punctuation > 5 ? 1.5 : 0, "🔤 Complex punctuation frequent.");
 
-      // Sentence length
-      const sentences = text.match(/[^.!?]+[.!?]/g) || [];
-      if (sentences.length > 3) {
-        const lens = sentences.map(s => s.trim().split(/\s+/).length);
-        const avg = lens.reduce((a, b) => a + b, 0) / lens.length;
-        const variance = lens.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / lens.length;
-        addFactor("Sentence Length", variance < 20 ? 1.5 : 0, "📏 Uniform sentence lengths — possible AI drafting");
-      } else {
-        addFactor("Sentence Length", 0, "");
-      }
+      const averageWordLength = text.split(/\s+/).reduce((acc, word) => acc + word.length, 0) / text.split(/\s+/).length;
+      addFactor("Avg. Word Length", averageWordLength > 5 ? 1 : 0, "📏 Longer average word length.");
 
-      // Modal verbs
-      const modalCount = (text.match(/\b(should|would|could|might|may|must)\b/gi) || []).length;
-      addFactor("Modal Verbs", modalCount > 5 ? 1.5 : 0, "⚖️ Heavy modal verbs usage — AI hedging style");
-
-      // Hedging language
-      const hedgeCount = (text.match(/\b(possibly|potentially|may|might|arguably|perhaps)\b/gi) || []).length;
-      addFactor("Hedging", hedgeCount > 3 ? 1.5 : 0, "💬 Excessive hedging language — possible AI uncertainty");
-
-      // Passive voice (approximate)
-      const passiveCount = (text.match(/\b(is|are|was|were|be|been|being)\b\s+\w+ed\b/gi) || []).length;
-      addFactor("Passive Voice", passiveCount > 4 ? 1.5 : 0, "🎭 Frequent passive voice — formal AI tone");
-
-      // Combo triggers
-      const combos = [
-        { pattern: /together, we can.*|collaborative approach/i, value: 2, msg: "🧠 Combo: 'together, we can'" },
-        { pattern: /influence.*platforms.*responsible/i, value: 2, msg: "🧠 Combo: 'influence, platforms, responsible'" },
-        { pattern: /strive.*ecosystem.*truth/i, value: 2, msg: "🧠 Combo: 'strive, ecosystem, truth'" }
-      ];
-      let comboScore = 0;
-      combos.forEach(rule => {
-        if (rule.pattern.test(text)) {
-          comboScore += rule.value;
-          messages.push(rule.msg);
-        }
-      });
-      score += comboScore;
-      factors.push({ name: "Combo Triggers", value: comboScore });
-
-      const matchScore = Math.min(10, score).toFixed(1);
-      const highFlag = score > 5 ? "High" : "Moderate";
-      document.getElementById("results").innerHTML = `<strong>AI Match Score: ${matchScore}/10</strong><br><strong>Likelihood:</strong> ${highFlag}<br><ul><li>${messages.join("</li><li>")}</li></ul>`;
-      drawHorizontalChart(factors);
+      const finalScore = Math.min(10, score).toFixed(1);
+      document.getElementById("results").innerHTML = `<b>AI Score: ${finalScore}/10</b><br><ul><li>${messages.join("</li><li>")}</li></ul>`;
+      drawChart(factors);
     }
 
     function clearDetect() {
       document.getElementById("detectInput").value = "";
       document.getElementById("results").innerHTML = "";
       const ctx = document.getElementById("scoreChart").getContext("2d");
-      ctx.clearRect(0, 0, 800, 1000);
+      ctx.clearRect(0, 0, 800, 600);
     }
 
-    function drawHorizontalChart(factors) {
-      const canvas = document.getElementById("scoreChart");
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const barHeight = 30;
-      const spacing = 25;
-      const labelWidth = 180;
-      const startX = labelWidth + 20;
-      const startY = 30;
-      ctx.font = "14px Arial";
-      ctx.textAlign = "right";
-      const scale = (canvas.width - startX - 50) / 10;
+    function drawChart(factors) {
+      const ctx = document.getElementById("scoreChart").getContext("2d");
+      ctx.clearRect(0, 0, 800, 600);
       factors.forEach((factor, i) => {
-        const y = startY + i * (barHeight + spacing);
-        const barWidth = factor.value * scale;
-        ctx.fillStyle = "#000";
-        ctx.fillText(factor.name, labelWidth, y + barHeight / 2 + 5);
         ctx.fillStyle = "#4a90e2";
-        ctx.fillRect(startX, y, barWidth, barHeight);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.fillText(factor.value.toFixed(1), startX + barWidth / 2, y + barHeight / 2 + 5);
-        ctx.textAlign = "right";
+        ctx.fillRect(200, i * 50 + 30, factor.value * 50, 30);
+        ctx.fillStyle = "#000";
+        ctx.fillText(`${factor.name}: ${factor.value}`, 10, i * 50 + 50);
       });
     }
   </script>
