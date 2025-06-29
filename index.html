@@ -144,14 +144,22 @@
       { key:'EllipsisUsage',        test:t=>(t.match(/…|\.\.\./g)||[]).length>1,                              msg:'… Ellipsis overuse' },
       { key:'EmDashUsage',          test:t=>(t.match(/—/g)||[]).length>2,                                    msg:'— Heavy em-dash use' },
       {
-        key:'PunctuationSpacing',
+        key: 'PunctuationSpacing',
         invert: true,
         test: t => {
-          const singleP  = (t.match(/\.\s[A-Z]/g)||[]).length;
-          const doubleP  = (t.match(/\.\s\s[A-Z]/g)||[]).length;
-          const correctC = (t.match(/,\s\w/g)||[]).length;
-          const badC     = (t.match(/,(?!\s)/g)||[]).length;
-          return (singleP>0 && doubleP>0) || (correctC>0 && badC>0);
+          const totalPeriods = (t.match(/\./g) || []).length;
+          const singleP = (t.match(/\.\s[A-Z]/g) || []).length;
+          const doubleP = (t.match(/\.\s\s[A-Z]/g) || []).length;
+      
+          const totalCommas = (t.match(/,/g) || []).length;
+          const correctC = (t.match(/,\s\w/g) || []).length;
+          const badC = (t.match(/,(?!\s)/g) || []).length;
+      
+          // Only flag if each style is at least 15% of total, showing a real mix
+          const periodMix = totalPeriods > 5 && singleP / totalPeriods > 0.15 && doubleP / totalPeriods > 0.15;
+          const commaMix = totalCommas > 5 && correctC / totalCommas > 0.15 && badC / totalCommas > 0.15;
+      
+          return periodMix || commaMix;
         },
         msg: '⌛ Human-style inconsistent spacing around . and ,'
       },
