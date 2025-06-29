@@ -68,7 +68,7 @@
 
     function encodeText() {
       const input = document.getElementById("encodeInput").value;
-      const watermark = "\u200B\u200C\u200D"; // Zero-width watermark
+      const watermark = "\u200B\u200C\u200D";
       const phrases = [
         "Balance human perspective with digital insight.",
         "Include analysis informed by technology.",
@@ -100,25 +100,36 @@
 
       addFactor("Watermark", text.includes("\u200B\u200C\u200D") ? 5 : 0, "💧 Watermark detected.");
 
-      addFactor("Contractions", (text.match(/\b(I’m|don't|can't|won't|isn't|aren't)\b/gi) || []).length < 2 ? 1 : 0, "🚫 Few contractions.");
+      const contractions = (text.match(/\b(I’m|don't|can't|won't|isn't|aren't|wasn't|weren't)\b/gi) || []).length;
+      addFactor("Few Contractions", contractions < 3 ? 2 : 0, "🚫 Few or no contractions (formal tone)");
 
-      const uniqueWords = new Set(text.split(/\s+/).map(w => w.toLowerCase()));
-      addFactor("Lexical Diversity", uniqueWords.size / text.split(/\s+/).length < 0.35 ? 2 : 0, "📊 Low lexical diversity.");
+      const repeatedStructures = (text.match(/\b(One major reason|Another important cause|A third reason|In conclusion)\b/gi) || []).length;
+      addFactor("Repeated Structures", repeatedStructures > 2 ? 2.5 : 0, "🔁 Highly repetitive paragraph structure detected.");
 
-      const emojiCount = (text.match(/[😀-🙏]/g) || []).length;
-      addFactor("Emojis", emojiCount > 1 ? 1.5 : 0, "😊 Frequent emoji use.");
+      const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
+      const paraLengths = paragraphs.map(p => p.trim().split(/\s+/).length);
+      const avgPara = paraLengths.reduce((a,b)=>a+b,0)/paraLengths.length;
+      const uniformParas = paraLengths.filter(len => Math.abs(len - avgPara) < 10).length;
+      addFactor("Uniform Paragraphs", uniformParas === paragraphs.length && paragraphs.length > 2 ? 2 : 0, "📏 Uniform paragraph lengths — AI structural hallmark");
+
+      const personalPronouns = (text.match(/\b(I|we|my|our|you|your)\b/gi) || []).length;
+      addFactor("No Personal Voice", personalPronouns === 0 ? 2 : 0, "🙅‍♂️ No personal voice — neutral AI style");
+
+      const historicalRefs = (text.match(/\b(410 CE|476 CE|Middle Ages|Roman Empire|Visigoths|Vandals)\b/g) || []).length;
+      addFactor("Historical Specificity", historicalRefs > 3 ? 1.5 : 0, "📜 Frequent precise historical details — common AI pattern");
+
+      const words = text.split(/\s+/);
+      const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+      addFactor("Low Lexical Diversity", uniqueWords.size / words.length < 0.4 ? 1.5 : 0, "📊 Low lexical diversity detected.");
 
       const passive = (text.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g) || []).length;
-      addFactor("Passive Voice", passive > 3 ? 1.5 : 0, "🎭 Passive voice detected.");
-
-      const punctuation = (text.match(/[;,]/g) || []).length;
-      addFactor("Complex Punctuation", punctuation > 5 ? 1.5 : 0, "🔤 Complex punctuation frequent.");
-
-      const averageWordLength = text.split(/\s+/).reduce((acc, word) => acc + word.length, 0) / text.split(/\s+/).length;
-      addFactor("Avg. Word Length", averageWordLength > 5 ? 1 : 0, "📏 Longer average word length.");
+      addFactor("Passive Voice", passive > 2 ? 1.5 : 0, "🎭 Frequent passive voice detected.");
 
       const finalScore = Math.min(10, score).toFixed(1);
-      document.getElementById("results").innerHTML = `<b>AI Score: ${finalScore}/10</b><br><ul><li>${messages.join("</li><li>")}</li></ul>`;
+      const likelihood = score > 5 ? "High" : "Moderate";
+      
+      document.getElementById("results").innerHTML = `<strong>AI Match Score: ${finalScore}/10</strong><br><strong>Likelihood:</strong> ${likelihood}<br><ul><li>${messages.join("</li><li>")}</li></ul>`;
+
       drawChart(factors);
     }
 
