@@ -1,58 +1,65 @@
 # 🛡️ PromptShield – Full AI Detection & Watermark Tool
 
 > ⚠️ **Experimental Tool**  
-> This tool is 100% experimental. It is provided as-is, with no warranties or guarantees. Use at your own discretion. The authors are not responsible for any outcomes, interpretations, or actions taken based on the tool's results.
+> PromptShield is a research and educational prototype. Use results responsibly and as one part of a broader evaluation process. No warranties or guarantees provided.
 
 ---
 
-## ⚡ Quick Start
+## 🚀 Quick Start
 
-### 🔥 Encode an Assignment
+### ✍️ Encode an Assignment
 
 1️⃣ Switch to **Encode** mode.  
 2️⃣ Paste your assignment instructions.  
-3️⃣ Click **Encode** — watermark and bait phrases will be added.  
-4️⃣ Click **Copy Encoded Text** to copy and share with students.
+3️⃣ Click **Encode** — this embeds a zero-width watermark and subtle bait phrases.  
+4️⃣ Click **Copy Encoded Text** to share with students.
 
 ---
 
-### 🔎 Analyze a Submission
+### 🔎 Detect AI Use
 
 1️⃣ Switch to **Detect** mode.  
-2️⃣ Paste a student's essay.  
-3️⃣ Click **Analyze** to see an **AI Match Score** (out of 10) and a detailed breakdown of signals.
+2️⃣ Paste the student’s essay or text.  
+3️⃣ Click **Analyze** to see the **AI Match Score** (out of 10), a factor breakdown, and a visual chart.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-- **Encode mode**: Adds zero-width character watermarks and AI "tell" bait phrases.
-- **Detect mode**: Flags AI signals like GPT-style tone, emoji use, formal structure, and lack of contractions.
-
----
-
-## 🧬 Detection Logic
-
-- **Phrase combos** (e.g., “together, we can”)
-- **Transitions** (e.g., “However,”, “Furthermore,”)
-- **Soft conclusions** (e.g., “In conclusion,”, “Ultimately,”)
-- **Emoji detection**
-- **Contraction scarcity** (formal tone)
+- **Encode mode**: Embeds invisible watermarks and bait text to help trace AI-generated responses.
+- **Detect mode**: Identifies signals of AI-generated writing, including tone, structure, and stylistic markers.
+- **Visual score breakdown**: Bar chart displays factor contributions for transparency.
 
 ---
 
-## 💡 Why Watermark?
+## 🧬 Detection Signals
 
-The invisible watermark (zero-width characters) serves as a digital "trail" that might survive if a student pastes instructions into an AI generator. This can help suggest potential AI use when decoding.
+- **Trigger phrases** (e.g., “together, we can”, “strive to create an ecosystem of truth”)
+- **Formal connectors** (e.g., “Moreover,” “In addition,”)
+- **Generic conclusions** (e.g., “In conclusion,” “Ultimately,”)
+- **Emoji usage**
+- **Low contraction count** (indicates formal or non-personal tone)
+- **Low lexical diversity** (repetitive or uniform vocabulary)
+- **Overly clean punctuation and sentence uniformity**
+- **Repeated phrase patterns**
+- **Hidden watermark detection**
+
+---
+
+## 💡 Why Use Watermarks?
+
+Zero-width watermarks provide an invisible trail if students paste instructions into AI systems. Combined with subtle bait phrases, this helps indicate whether AI tools were used to generate submissions.
 
 ---
 
 ## ⚖️ Important Notes
 
-- Scores above 5/10 indicate moderate to high AI signal likelihood.  
-- This tool does **not** conclusively prove AI use. Always combine with context and judgment.  
-- Designed for research and educational purposes only.
+- Scores above 5/10 suggest moderate to high likelihood of AI involvement.
+- This tool does **not** definitively prove AI use; always consider context and additional evidence.
+- Designed as a research and educational aid — not a disciplinary instrument on its own.
 
 ---
 
-### 🙌 Built to support academic integrity and encourage transparent learning.
+## 🤝 Supporting Integrity
+
+PromptShield aims to support academic honesty, encourage critical thinking, and foster transparent learning conversations.
