@@ -14,7 +14,8 @@
     label { font-size: 14px; margin-right: 10px; }
   </style>
 </head>
-<body onload="updateStrictnessDisplay()">
+<body onload="switchMode('encode'); updateStrictnessDisplay()">
+
   <h1>PromptShield – Advanced AI Detection & Encoding Tool</h1>
   <div id="controls">
     <button onclick="switchMode('encode')">Encode Instructions</button>
@@ -64,15 +65,15 @@
       }
       return seq;
     }
-    function countSyllables(w) {
-      w = w.toLowerCase();
-      if (w.length <= 3) return 1;
-      const m = w.match(/[aeiouy]{1,2}/g);
+    function countSyllables(word) {
+      word = word.toLowerCase();
+      if (word.length <= 3) return 1;
+      const m = word.match(/[aeiouy]{1,2}/g);
       return m ? m.length : 1;
     }
-    function fleschKincaid(txt) {
-      const sents = (txt.match(/[^.!?]+[.!?]/g) || []).length;
-      const ws = txt.split(/\s+/);
+    function fleschKincaid(text) {
+      const sents = (text.match(/[^.!?]+[.!?]/g) || []).length;
+      const ws = text.split(/\s+/);
       const syl = ws.reduce((a, w) => a + countSyllables(w), 0);
       const ASL = sents ? ws.length / sents : 0;
       const ASW = ws.length ? syl / ws.length : 0;
@@ -88,125 +89,125 @@
         return ws.length ? s / ws.length : 0;
       });
       if (scores.length < 2) return 1;
-      const m = scores.reduce((a, b) => a + b, 0) / scores.length;
-      return scores.reduce((a, b) => a + (b - m) ** 2, 0) / scores.length;
+      const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+      return scores.reduce((a, b) => a + (b - mean) ** 2, 0) / scores.length;
     }
 
     // ---- Configurable Weights ----
     const WEIGHTS = {
-      Watermark: 5,
-      FewContractions: 2,
+      Watermark:            5,
+      FewContractions:      2,
       RepetitiveStructures: 4.5,
       ExcessiveTransitions: 2,
-      UniformParagraphs: 2,
-      NoPersonalVoice: 2,
-      NumericDensity: 2,
-      OpinionInsertion: 1.5,
-      RhetoricalQuestions: 2,
-      ReadabilityScore: 1.5,
-      LowLexicalDiversity: 1.5,
-      PassiveVoice: 1.5,
-      NgramRepetition: 1.5,
-      SentimentUniformity: 1.5,
-      HedgeWords: 1.5,
-      EmojiUsage: 1.5,
-      ComplexPunctuation: 1.5
+      UniformParagraphs:    2,
+      NoPersonalVoice:      2,
+      NumericDensity:       2,
+      OpinionInsertion:     1.5,
+      RhetoricalQuestions:  2,
+      ReadabilityScore:     1.5,
+      LowLexicalDiversity:  1.5,
+      PassiveVoice:         1.5,
+      NgramRepetition:      1.5,
+      SentimentUniformity:  1.5,
+      HedgeWords:           1.5,
+      EmojiUsage:           1.5,
+      ComplexPunctuation:   1.5
     };
 
     // ---- Detection Rules ----
     let watermark = randomWatermark();
     const RULES = [
-      { key:'Watermark',
+      { key: 'Watermark',
         test: t => t.includes(watermark),
         msg: '💧 Watermark detected.'
       },
-      { key:'FewContractions',
+      { key: 'FewContractions',
         test: t => (t.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi) || []).length < 4,
         msg: '🚫 Few contractions (formal tone)'
       },
-      { key:'RepetitiveStructures',
+      { key: 'RepetitiveStructures',
         test: t => (t.match(/\b(One major reason|Another cause|A third reason|In conclusion)\b/gi) || []).length > 2,
         msg: '🔁 Repetitive structure'
       },
-      { key:'ExcessiveTransitions',
+      { key: 'ExcessiveTransitions',
         test: t => (t.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi) || []).length > 3,
         msg: '🌀 Excessive transitions'
       },
-      { key:'UniformParagraphs',
+      { key: 'UniformParagraphs',
         test: t => {
           const ps = t.split(/\n+/).filter(p => p.trim());
           const ls = ps.map(p => p.split(/\s+/).length);
-          const avg = ls.reduce((a,b) => a+b, 0) / ls.length;
+          const avg = ls.reduce((a,b) => a + b, 0) / ls.length;
           return ls.length > 2 && ls.every(l => Math.abs(l - avg) < 10);
         },
         msg: '📏 Uniform paragraphs'
       },
-      { key:'NoPersonalVoice',
+      { key: 'NoPersonalVoice',
         test: t => (t.match(/\b(I|we|my|our|you|your)\b/gi) || []).length < 2,
         msg: '🙅‍♂️ No personal voice'
       },
-      { key:'NumericDensity',
+      { key: 'NumericDensity',
         test: t => {
           const nums = t.match(/\b\d+(\.\d+)?%?\b/g) || [];
           return nums.length > t.split(/\s+/).length * 0.03;
         },
         msg: '🔢 High numeric density'
       },
-      { key:'OpinionInsertion',
+      { key: 'OpinionInsertion',
         test: t => (t.match(/\b(In my opinion|I believe|I think|It is important to note)\b/gi) || []).length > 0,
         msg: '🗣️ Opinion insertion'
       },
-      { key:'RhetoricalQuestions',
+      { key: 'RhetoricalQuestions',
         test: t => (t.match(/\?\s/g) || []).length < 1,
         msg: '❓ No questions'
       },
-      { key:'ReadabilityScore',
+      { key: 'ReadabilityScore',
         test: t => {
           const fk = fleschKincaid(t);
           return fk > 35 && fk < 60;
         },
         msg: '📐 Readability range'
       },
-      { key:'LowLexicalDiversity',
+      { key: 'LowLexicalDiversity',
         test: t => {
-          const ws = t.split(/\s+/), uw = new Set(ws.map(w => w.toLowerCase()));
+          const ws = t.split(/\s+/), uw = new Set(ws.map(w=>w.toLowerCase()));
           return uw.size / ws.length < 0.4;
         },
         msg: '📊 Low diversity'
       },
-      { key:'PassiveVoice',
+      { key: 'PassiveVoice',
         test: t => (t.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g) || []).length > 2,
         msg: '🎭 Passive voice'
       },
-      { key:'NgramRepetition',
+      { key: 'NgramRepetition',
         test: t => {
           const ws = t.split(/\s+/), tr = {};
           for (let i=0; i<ws.length-2; i++){
-            const g = ws[i]+' '+ws[i+1]+' '+ws[i+2];
-            tr[g] = (tr[g]||0)+1;
+            const g = ws[i] + ' ' + ws[i+1] + ' ' + ws[i+2];
+            tr[g] = (tr[g]||0) + 1;
             if (tr[g] > 2) return true;
           }
           return false;
         },
         msg: '🔂 N-gram repetition'
       },
-      { key:'SentimentUniformity',
+      { key: 'SentimentUniformity',
         test: t => {
-          const ps = t.split(/\n+/).filter(p => p.trim());
+          const ps = t.split(/\n+/).filter(p=>p.trim());
           return sentimentVariance(ps) < 0.002;
         },
         msg: '⚖️ Uniform sentiment'
       },
-      { key:'HedgeWords',
+      { key: 'HedgeWords',
         test: t => (t.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi) || []).length > 3,
         msg: '🔍 Hedge words'
       },
-      { key:'EmojiUsage',
-        // fixed invalid range by using Unicode property
-        test: t => /\p{Emoji}/u.test(t),
+      { key: 'EmojiUsage',
+        // only count true pictographic emoji (faces, hands, etc.)
+        test: t => (t.match(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}]/ug) || []).length > 0,
         msg: '😊 Frequent emoji usage'
       },
-      { key:'ComplexPunctuation',
+      { key: 'ComplexPunctuation',
         test: t => (t.match(/[;:,]/g) || []).length > 5,
         msg: '✍️ Complex punctuation usage'
       }
@@ -249,22 +250,20 @@
       const txt = normalizeText(raw);
       document.getElementById('spinner').style.display='none';
       const ws = txt.split(/\s+/).filter(w=>w);
-      if(ws.length<50){
-        document.getElementById('results').innerText='Not enough data to judge.';
+      if (ws.length < 50) {
+        document.getElementById('results').innerText = 'Not enough data to judge.';
         return;
       }
-      const strict = parseFloat(
-        document.getElementById('strictnessSlider').value
-      );
+      const strict = parseFloat(document.getElementById('strictnessSlider').value);
       let score=0, msgs=[], details=[];
       RULES.forEach(r => {
-        if(r.test(txt)) {
+        if (r.test(txt)) {
           const w = WEIGHTS[r.key] * strict;
           score += w; msgs.push(r.msg); details.push({name:r.key, value:w});
         }
       });
-      const finalScore = Math.min(10,score).toFixed(1),
-            likelihood = score>5?'High':'Moderate';
+      const finalScore = Math.min(10,score).toFixed(1);
+      const likelihood = score>5?'High':'Moderate';
       reportData = { score: finalScore, likelihood, details };
       document.getElementById('results').innerHTML =
         `<strong>AI Match Score: ${finalScore}/10</strong><br>` +
@@ -282,8 +281,7 @@
     function clearDetect() {
       document.getElementById('detectInput').value='';
       document.getElementById('results').innerHTML='';
-      document.getElementById('scoreChart').getContext('2d')
-        .clearRect(0,0,800,600);
+      document.getElementById('scoreChart').getContext('2d').clearRect(0,0,800,600);
     }
     function exportReport() {
       const blob = new Blob([JSON.stringify(reportData,null,2)],{type:'application/json'});
