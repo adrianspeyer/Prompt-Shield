@@ -1,327 +1,371 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <title>PromptShield – Advanced AI Detection & Encoding Tool</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptShield v2 – AI Detection & Encoding Tool</title>
+  <meta name="description" content="PromptShield helps educators detect AI-generated content and encode assignments with invisible watermarks. Open-source heuristic analysis.">
+
+  <!-- Speyer UI System v2.0.7 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/adrianspeyer/speyer-ui@2.0.7/dist/sui-tokens.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/adrianspeyer/speyer-ui@2.0.7/dist/sui-components.min.css">
+
+  <!-- Inter font (SUI standard) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 20px; padding: 20px; }
-    textarea { width: 100%; height: 200px; font-size: 14px; padding: 10px; }
-    button { padding: 10px 20px; margin: 10px 5px 0 0; font-size: 16px; cursor: pointer; }
-    #output, #results { background: #fff; padding: 15px; margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; white-space: pre-wrap; }
-    #spinner { display: none; margin-top: 10px; }
-    canvas { margin-top: 20px; background: #fff; border: 1px solid #ccc; border-radius: 5px; }
-    #controls { margin-top: 10px; }
-    label { font-size: 14px; margin-right: 10px; }
+    /* PromptShield page-specific styles only — SUI handles the rest */
+
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+    /* Layout */
+    .ps-header { position: sticky; top: 0; z-index: 100; }
+    .ps-header-inner, .ps-main { max-width: 900px; margin: 0 auto; }
+    .ps-main { padding: var(--sui-space-4); }
+    @media (max-width: 600px) { .ps-main { padding: var(--sui-space-3); } }
+
+    /* Logo */
+    .ps-logo { display: flex; align-items: center; gap: var(--sui-space-2); }
+    .ps-logo-icon { width: 36px; height: 36px; background: var(--sui-blue-primary); border-radius: var(--sui-radius-sm);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ps-logo-icon svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .ps-logo-text { font-size: 20px; font-weight: 700; color: var(--sui-text-primary); }
+
+    /* Theme toggle icons */
+    [data-theme="dark"] .ico-sun { display: block; }
+    [data-theme="dark"] .ico-moon { display: none; }
+    [data-theme="light"] .ico-sun { display: none; }
+    [data-theme="light"] .ico-moon { display: block; }
+
+    /* Mode tabs */
+    .ps-tabs { display: flex; background: var(--sui-bg-elevated); border-radius: var(--sui-radius-md);
+      padding: 4px; gap: 4px; margin-bottom: var(--sui-space-4); border: 1px solid var(--sui-border); }
+    .ps-tab { flex: 1; padding: var(--sui-space-2) var(--sui-space-3); border: none; border-radius: var(--sui-radius-sm);
+      background: transparent; color: var(--sui-text-secondary); font-family: inherit; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: all var(--sui-transition);
+      display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; }
+    .ps-tab:hover { color: var(--sui-text-primary); background: var(--sui-bg-card); }
+    .ps-tab:focus-visible { outline: 2px solid var(--sui-blue-focus); outline-offset: 2px; }
+    .ps-tab-active { background: var(--sui-bg-card); color: var(--sui-blue-primary); box-shadow: var(--sui-shadow-sm); }
+    .ps-tab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Card title with icon */
+    .ps-card-title svg { width: 20px; height: 20px; fill: none; stroke: var(--sui-blue-primary);
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* Textarea enhancements */
+    .ps-ta-wrap { position: relative; }
+    .ps-char-count { position: absolute; bottom: 12px; right: 12px; font-size: 12px;
+      color: var(--sui-text-muted); pointer-events: none; background: var(--sui-bg-primary);
+      padding: 2px 6px; border-radius: 4px; }
+
+    /* Strictness slider */
+    .ps-slider { display: flex; align-items: center; gap: var(--sui-space-3); padding: var(--sui-space-3);
+      background: var(--sui-bg-primary); border: 1px solid var(--sui-border);
+      border-radius: var(--sui-radius-md); margin-bottom: var(--sui-space-3); }
+    .ps-slider-label { font-size: 14px; font-weight: 500; color: var(--sui-text-secondary);
+      white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .ps-slider-label svg { width: 16px; height: 16px; fill: none; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .ps-slider-track { flex: 1; min-width: 80px; }
+    .ps-slider-value { font-size: 16px; font-weight: 700; color: var(--sui-blue-primary); min-width: 40px; text-align: center; }
+
+    /* Spinner */
+    .ps-spin { display: none; align-items: center; justify-content: center; gap: 8px;
+      padding: var(--sui-space-4); color: var(--sui-text-muted); font-size: 14px; }
+    .ps-spin-visible { display: flex; }
+    .ps-dot { width: 8px; height: 8px; background: var(--sui-blue-primary); border-radius: 50%;
+      animation: psPulse 1s ease-in-out infinite; }
+    .ps-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ps-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes psPulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+
+    /* Score card */
+    .ps-score-card { display: flex; align-items: center; gap: var(--sui-space-4); padding: var(--sui-space-4);
+      border-radius: var(--sui-radius-lg); margin-bottom: var(--sui-space-3); }
+    .ps-score-low { background: var(--sui-success-soft); border: 1px solid var(--sui-success); }
+    .ps-score-mod { background: var(--sui-warning-soft); border: 1px solid var(--sui-warning); }
+    .ps-score-high { background: var(--sui-error-soft); border: 1px solid var(--sui-error); }
+
+    .ps-ring { width: 92px; height: 92px; flex-shrink: 0; position: relative; }
+    .ps-ring svg { width: 92px; height: 92px; transform: rotate(-90deg); }
+    .ps-ring-bg { fill: none; stroke: var(--sui-border); stroke-width: 6; }
+    .ps-ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 800ms ease-out; }
+    .ps-ring-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 24px; font-weight: 700; color: var(--sui-text-primary); }
+
+    .ps-score-meta h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .ps-score-meta p { font-size: 14px; color: var(--sui-text-secondary); line-height: 1.5; }
+    .ps-score-low .ps-ring-fill { stroke: var(--sui-success); } .ps-score-low h3 { color: var(--sui-success-strong); }
+    .ps-score-mod .ps-ring-fill { stroke: var(--sui-warning); } .ps-score-mod h3 { color: var(--sui-warning-strong); }
+    .ps-score-high .ps-ring-fill { stroke: var(--sui-error); } .ps-score-high h3 { color: var(--sui-error-strong); }
+
+    /* Confidence banner */
+    .ps-conf { display: flex; align-items: center; gap: 8px; padding: var(--sui-space-2) var(--sui-space-3);
+      border-radius: var(--sui-radius-sm); font-size: 13px; margin-bottom: var(--sui-space-3); }
+    .ps-conf-0 { background: var(--sui-warning-soft); border: 1px solid var(--sui-warning); color: var(--sui-warning-strong); }
+    .ps-conf-1 { background: var(--sui-info-soft); border: 1px solid var(--sui-info); color: var(--sui-info-strong); }
+    .ps-conf-2 { background: var(--sui-success-soft); border: 1px solid var(--sui-success); color: var(--sui-success-strong); }
+
+    /* Model attribution */
+    .ps-model-attr { display: flex; gap: var(--sui-space-2); flex-wrap: wrap; margin-bottom: var(--sui-space-3); align-items: center; }
+    .ps-model-label { font-size: 12px; color: var(--sui-text-muted); }
+    .ps-model-tag { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 99px;
+      border: 1px solid var(--sui-border); color: var(--sui-text-secondary); background: var(--sui-bg-elevated); }
+    .ps-model-match { border-color: var(--sui-blue-primary); color: var(--sui-blue-strong); background: var(--sui-blue-soft); }
+
+    /* Signal categories */
+    .ps-cat-title { font-size: 13px; font-weight: 700; color: var(--sui-text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: var(--sui-space-2); padding-bottom: var(--sui-space-1);
+      border-bottom: 1px solid var(--sui-border); display: flex; align-items: center; gap: 6px; }
+    .ps-signal-cat { margin-bottom: var(--sui-space-2); }
+
+    /* Signal items */
+    .ps-signal { display: flex; align-items: flex-start; gap: var(--sui-space-2);
+      padding: var(--sui-space-2) var(--sui-space-3); border-radius: var(--sui-radius-sm);
+      background: var(--sui-bg-primary); border: 1px solid var(--sui-border);
+      font-size: 13px; color: var(--sui-text-secondary); transition: all var(--sui-transition); margin-bottom: 6px; }
+    .ps-sig-fired { background: var(--sui-error-soft); border-color: var(--sui-error); color: var(--sui-error-strong); }
+    .ps-sig-human { background: var(--sui-success-soft); border-color: var(--sui-success); color: var(--sui-success-strong); }
+    .ps-sig-icon { flex-shrink: 0; font-size: 16px; width: 22px; text-align: center; padding-top: 1px; }
+    .ps-sig-body { flex: 1; min-width: 0; }
+    .ps-sig-name { font-weight: 500; }
+    .ps-sig-desc { font-size: 11px; color: var(--sui-text-muted); margin-top: 2px; line-height: 1.4; }
+    .ps-sig-fired .ps-sig-desc { color: var(--sui-error-strong); opacity: 0.75; }
+    .ps-sig-human .ps-sig-desc { color: var(--sui-success-strong); opacity: 0.75; }
+    .ps-sig-weight { font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+      background: var(--sui-bg-elevated); white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+    .ps-sig-fired .ps-sig-weight { background: rgba(0,0,0,0.06); }
+    .ps-sig-human .ps-sig-weight { background: rgba(0,0,0,0.05); }
+
+    /* Bar chart */
+    .ps-bar { display: flex; align-items: center; gap: var(--sui-space-2); margin-bottom: 6px; }
+    .ps-bar-label { width: 150px; font-size: 12px; color: var(--sui-text-secondary); text-align: right;
+      flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ps-bar-track { flex: 1; height: 22px; background: var(--sui-bg-primary); border-radius: 4px;
+      border: 1px solid var(--sui-border); overflow: hidden; }
+    .ps-bar-fill { height: 100%; border-radius: 3px; transition: width 600ms ease-out; min-width: 2px; }
+    .ps-bar-ai { background: var(--sui-error); }
+    .ps-bar-human { background: var(--sui-success); }
+    .ps-bar-value { width: 44px; font-size: 12px; font-weight: 600; color: var(--sui-text-primary); }
+    .ps-bar-empty { font-size: 13px; color: var(--sui-text-muted); padding: var(--sui-space-2); }
+    @media (max-width: 500px) { .ps-bar-label { width: 90px; font-size: 11px; } }
+
+    /* Toast */
+    .ps-toast { position: fixed; bottom: var(--sui-space-4); right: var(--sui-space-4);
+      padding: var(--sui-space-3) var(--sui-space-4); border-radius: var(--sui-radius-md);
+      font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px;
+      box-shadow: var(--sui-shadow-lg); z-index: 200; transform: translateY(120%); opacity: 0;
+      transition: all 300ms ease-out; }
+    .ps-toast-show { transform: translateY(0); opacity: 1; }
+    .ps-toast-ok { background: #15803D; color: #fff; }
+    .ps-toast-info { background: #0E7490; color: #fff; }
+
+    /* Footer */
+    .ps-footer { text-align: center; padding: var(--sui-space-5) var(--sui-space-4); font-size: 12px; color: var(--sui-text-muted); }
+    .ps-footer a { color: var(--sui-blue-primary); text-decoration: none; }
+    .ps-footer a:hover { text-decoration: underline; }
+
+    /* Utility - hide on small screens */
+    @media (max-width: 480px) { .ps-hide-mobile { display: none; } }
   </style>
 </head>
-<body onload="switchMode('encode'); updateStrictnessDisplay()">
 
-  <h1>PromptShield – Advanced AI Detection & Encoding Tool</h1>
-  <div id="controls">
-    <button onclick="switchMode('encode')">Encode Instructions</button>
-    <button onclick="switchMode('detect')">Detect AI Content</button>
-    <label>
-      Strictness:
-      <input id="strictnessSlider" type="range" min="0.5" max="2" step="0.1"
-             value="1" oninput="updateStrictnessDisplay()">
-      <span id="strictnessValue">1.0</span>x
-    </label>
+<body>
+  <!-- ==================== HEADER ==================== -->
+  <header class="ps-header sui-card" style="border-radius:0" role="banner">
+    <div class="ps-header-inner sui-flex sui-flex-between sui-items-center" style="padding:var(--sui-space-3) 0">
+      <div class="ps-logo">
+        <div class="ps-logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <span class="ps-logo-text">PromptShield</span>
+        <span class="sui-badge sui-badge-info ps-hide-mobile">v2.0</span>
+        <span class="sui-badge sui-badge-warning ps-hide-mobile">⚠ Experimental</span>
+      </div>
+      <button class="sui-btn sui-btn-ghost" onclick="togTheme()" aria-label="Toggle dark mode" style="min-width:44px;min-height:44px;padding:0">
+        <svg class="ico-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN ==================== -->
+  <main class="ps-main" role="main">
+
+    <!-- Mode Tabs -->
+    <div class="ps-tabs" role="tablist" aria-label="Mode selection">
+      <button class="ps-tab ps-tab-active" role="tab" aria-selected="true" aria-controls="panel-encode" data-mode="encode" onclick="switchMode('encode')">
+        <svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        Encode
+      </button>
+      <button class="ps-tab" role="tab" aria-selected="false" aria-controls="panel-detect" data-mode="detect" onclick="switchMode('detect')">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Detect
+      </button>
+    </div>
+
+    <!-- ======== ENCODE PANEL ======== -->
+    <div id="panel-encode" role="tabpanel">
+      <div class="sui-card sui-card-lg">
+        <h2 class="ps-card-title sui-flex sui-items-center sui-gap-2 sui-mb-2">
+          <svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          Encode Instructions
+        </h2>
+        <p class="sui-text-muted sui-mb-3" style="font-size:14px">Paste your assignment or upload a file. The encoder adds an invisible watermark and a bait phrase that AI tends to echo back.</p>
+
+        <div class="ps-ta-wrap">
+          <label for="encodeInput" class="sui-visually-hidden">Assignment instructions</label>
+          <textarea id="encodeInput" class="sui-input" style="min-height:200px;resize:vertical;font-size:15px;line-height:1.6" placeholder="Paste your assignment instructions here, or use Upload File below..."></textarea>
+          <span class="ps-char-count" id="encodeCount" aria-hidden="true">0 chars</span>
+        </div>
+
+        <!-- Custom Bait Phrase -->
+        <div class="sui-mt-3" style="padding:var(--sui-space-3);background:var(--sui-bg-primary);border:1px solid var(--sui-border);border-radius:var(--sui-radius-md)">
+          <label for="baitCustom" style="font-size:13px;font-weight:600;color:var(--sui-text-secondary);display:block;margin-bottom:var(--sui-space-1)">
+            🎣 Add Your Own Bait Phrase <span style="font-weight:400;color:var(--sui-text-muted)">(optional)</span>
+          </label>
+          <p style="font-size:12px;color:var(--sui-text-muted);margin-bottom:var(--sui-space-2)">PromptShield always injects one of its built-in bait phrases. You can add a second one here — something only you would recognize if it shows up in a student's submission.</p>
+          <input id="baitCustom" type="text" class="sui-input" style="font-size:14px;width:100%" placeholder='e.g. "Consider how innovation shapes ethical responsibility."' maxlength="200" aria-label="Your custom bait phrase">
+        </div>
+
+        <div class="sui-flex sui-gap-2 sui-mt-3" style="flex-wrap:wrap">
+          <button class="sui-btn sui-btn-primary" onclick="doEncode()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
+            Encode
+          </button>
+          <button class="sui-btn sui-btn-secondary" onclick="uploadFile('encodeInput')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload File
+          </button>
+          <button class="sui-btn sui-btn-secondary" onclick="copyEncoded()" id="copyBtn" disabled>Copy to Clipboard</button>
+          <button class="sui-btn sui-btn-secondary" onclick="downloadEncoded()" id="dlBtn" disabled>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Encoded
+          </button>
+        </div>
+        <input type="file" id="fileUpload" accept=".txt,.md,.rtf,.html,.htm" class="sui-hidden" aria-hidden="true">
+
+        <!-- Encoding Summary -->
+        <div id="encodeSummary" class="sui-hidden sui-mt-3" style="border:1px solid var(--sui-border);border-radius:var(--sui-radius-md);overflow:hidden">
+          <div style="padding:var(--sui-space-2) var(--sui-space-3);background:var(--sui-bg-elevated);font-size:13px;font-weight:600;color:var(--sui-text-secondary);border-bottom:1px solid var(--sui-border)">
+            ✅ Encoding Summary — What Was Added
+          </div>
+          <div id="encodeSummaryBody" style="padding:var(--sui-space-3);font-size:13px;line-height:1.8;color:var(--sui-text-secondary)"></div>
+        </div>
+
+        <!-- Encoded Output -->
+        <div id="encodeOutput" class="sui-hidden" style="background:var(--sui-bg-primary);border:1px solid var(--sui-border);border-radius:var(--sui-radius-md);padding:var(--sui-space-3);margin-top:var(--sui-space-3);font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- ======== DETECT PANEL ======== -->
+    <div id="panel-detect" role="tabpanel" class="sui-hidden">
+
+      <!-- Strictness Slider -->
+      <div class="ps-slider">
+        <span class="ps-slider-label">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Strictness
+        </span>
+        <div class="ps-slider-track">
+          <input id="strictSlider" type="range" min="0.5" max="2" step="0.1" value="1"
+                 oninput="updateStrictness()" aria-label="Detection strictness multiplier">
+        </div>
+        <span class="ps-slider-value" id="strictVal" aria-live="polite">1.0×</span>
+      </div>
+
+      <!-- Input Card -->
+      <div class="sui-card sui-card-lg">
+        <h2 class="ps-card-title sui-flex sui-items-center sui-gap-2 sui-mb-2">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Detect AI Content
+        </h2>
+        <p class="sui-text-muted sui-mb-3" style="font-size:14px">Paste text or upload a file to analyze for AI-generated patterns across 6 signal categories.</p>
+
+        <div class="ps-ta-wrap">
+          <label for="detectInput" class="sui-visually-hidden">Text to analyze</label>
+          <textarea id="detectInput" class="sui-input" style="min-height:200px;resize:vertical;font-size:15px;line-height:1.6" placeholder="Paste student content here, or use Upload File below..."></textarea>
+          <span class="ps-char-count" id="detectCount" aria-hidden="true">0 chars</span>
+        </div>
+
+        <div class="sui-flex sui-gap-2 sui-mt-3" style="flex-wrap:wrap">
+          <button class="sui-btn sui-btn-primary" onclick="startAnalysis()">Analyze</button>
+          <button class="sui-btn sui-btn-secondary" onclick="uploadFile('detectInput')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload File
+          </button>
+          <button class="sui-btn sui-btn-secondary" onclick="clearDetect()">Clear</button>
+          <button class="sui-btn sui-btn-secondary" onclick="exportReport()" id="exportBtn" disabled>Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Spinner -->
+      <div class="ps-spin" id="spinner" role="status">
+        <div class="ps-dot"></div><div class="ps-dot"></div><div class="ps-dot"></div>
+        <span>Analyzing text…</span>
+      </div>
+
+      <!-- Results Panel -->
+      <div id="resultsPanel" class="sui-hidden" aria-live="polite">
+
+        <!-- Score Card -->
+        <div class="ps-score-card" id="scoreCard">
+          <div class="ps-ring">
+            <svg viewBox="0 0 92 92">
+              <circle class="ps-ring-bg" cx="46" cy="46" r="40"/>
+              <circle class="ps-ring-fill" id="ringFill" cx="46" cy="46" r="40"
+                      stroke-dasharray="251.33" stroke-dashoffset="251.33"/>
+            </svg>
+            <div class="ps-ring-num" id="ringNum">0</div>
+          </div>
+          <div class="ps-score-meta">
+            <h3><span id="scoreIcon" aria-hidden="true"></span> <span id="scoreLabel"></span></h3>
+            <p id="scoreDesc"></p>
+          </div>
+        </div>
+
+        <!-- Confidence -->
+        <div class="ps-conf" id="confBanner" role="status">
+          <span id="confIcon" aria-hidden="true"></span>
+          <span id="confText"></span>
+        </div>
+
+        <!-- Model Attribution -->
+        <div class="ps-model-attr" id="modelAttr"></div>
+
+        <!-- Signal Categories -->
+        <div id="signalContainer"></div>
+
+        <!-- Bar Chart -->
+        <div class="sui-card">
+          <div class="ps-cat-title">Factor Breakdown</div>
+          <div id="barChart"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="ps-footer">
+    <p>PromptShield is a transparent heuristic tool — not a definitive AI detector.</p>
+    <p>Heuristic-only analysis has inherent accuracy limits (~55–65%). Always combine with manual review.</p>
+    <p style="margin-top:8px">
+      Built with <a href="https://github.com/adrianspeyer/speyer-ui" target="_blank" rel="noopener">Speyer UI</a>
+      · <a href="https://github.com/adrianspeyer/Prompt-Shield" target="_blank" rel="noopener">GitHub</a>
+      · Made in Canada with love 🇨🇦
+    </p>
+  </footer>
+
+  <!-- Toast -->
+  <div class="ps-toast ps-toast-ok" id="toast" role="status" aria-live="polite">
+    <span id="toastIcon" aria-hidden="true">✔</span>
+    <span id="toastMsg"></span>
   </div>
 
-  <div id="encodeMode">
-    <h2>Encode Teacher Instructions</h2>
-    <textarea id="encodeInput" placeholder="Paste your instructions..."></textarea><br>
-    <button onclick="encodeText()">Encode</button>
-    <button onclick="copyOutput()">Copy to Clipboard</button>
-    <div id="output"></div>
-  </div>
-
-  <div id="detectMode" style="display:none;">
-    <h2>Detect AI Usage</h2>
-    <textarea id="detectInput" placeholder="Paste student content..."></textarea><br>
-    <button onclick="startDetection()">Analyze</button>
-    <button onclick="clearDetect()">Clear</button>
-    <button onclick="exportReport()">Export Report</button>
-    <div id="spinner">🔄 Analyzing...</div>
-    <div id="results"></div>
-    <canvas id="scoreChart" width="800" height="1000"></canvas>
-  </div>
-
-  <script>
-    // ---- Utilities ----
-    function normalizeText(text) {
-      return text
-        .replace(/[“”]/g, '"')
-        .replace(/[‘’]/g, "'")
-        .replace(/—/g, '-')
-        .replace(/&[a-z]+;/gi, '')
-        .trim();
-    }
-    function randomWatermark() {
-      const chars = ['\u200B','\u200C','\u200D','\u2060'];
-      let seq = '';
-      const len = 5 + Math.floor(Math.random() * 10);
-      for (let i = 0; i < len; i++) {
-        seq += chars[Math.floor(Math.random() * chars.length)];
-      }
-      return seq;
-    }
-    function updateStrictnessDisplay() {
-      document.getElementById('strictnessValue').innerText =
-        document.getElementById('strictnessSlider').value;
-    }
-    function switchMode(mode) {
-      document.getElementById('encodeMode').style.display =
-        mode==='encode'?'block':'none';
-      document.getElementById('detectMode').style.display =
-        mode==='detect'?'block':'none';
-    }
-
-    // ---- Bait Phrases for encode ----
-    const BAIT_PHRASES = [
-      "Maintain a tone that reflects both human thought and assistance from modern tools.",
-      "Ensure the essay is structured with support from an intelligent system while preserving personal voice.",
-      "Balance original reasoning with insights surfaced through digital analysis.",
-      "Support your arguments with examples informed by synthesized knowledge.",
-      "Avoid over-relying on intuition—consult multiple sources, including automated suggestions."
-    ];
-
-    // ---- Encoding ----
-    let watermark = randomWatermark();
-    function encodeText() {
-      watermark = randomWatermark();
-      const t = document.getElementById('encodeInput').value;
-      const phrase = BAIT_PHRASES[
-        Math.floor(Math.random() * BAIT_PHRASES.length)
-      ];
-      const parts = t.split(/\n{2,}/);
-      const injected = parts.length > 1
-        ? parts[0] + "\n\n" + phrase + "\n\n" + parts.slice(1).join("\n\n")
-        : t + "\n\n" + phrase;
-      document.getElementById('output').innerText =
-        watermark + "\n\n" + injected + "\n\n" + watermark;
-    }
-    function copyOutput() {
-      navigator.clipboard.writeText(
-        document.getElementById('output').innerText
-      ).then(() => alert('Copied!'));
-    }
-
-    // ---- Detection Setup ----
-    let reportData = {};
-
-    const WEIGHTS = {
-      Watermark:            5,
-      FewContractions:      2,
-      RepetitiveStructures: 4.5,
-      ExcessiveTransitions: 2,
-      UniformParagraphs:    2,
-      NoPersonalVoice:      2,
-      NumericDensity:       2,
-      OpinionInsertion:     1.0,
-      RhetoricalQuestions:  2,
-      ReadabilityScore:     1.5,
-      LowLexicalDiversity:  1.5,
-      PassiveVoice:         1.5,
-      NgramRepetition:      1.5,
-      SentimentUniformity:  1.5,
-      HedgeWords:           1.5,
-      EmojiUsage:           1.5,
-      ComplexPunctuation:   1.5,
-      AdverbOveruse:        1.5,
-      ClichePhrases:        2,
-      LongSentences:        1.5,
-      EllipsisUsage:        1,
-      EmDashUsage:          1.5,
-      BaitPhrase:           2,
-      PunctuationSpacing:   1.5
-    };
-
-    const RULES = [
-      { key:'Watermark',
-        test: t => t.includes(watermark),
-        msg: '💧 Watermark detected.'
-      },
-      { key:'FewContractions',
-        test: t => (t.match(/\b(I’m|don’t|can’t|won’t|isn’t|aren’t)\b/gi)||[]).length<4,
-        msg: '🚫 Few contractions'
-      },
-      { key:'RepetitiveStructures',
-        test: t => (t.match(/\b(One major reason|Another cause|A third reason|In conclusion)\b/gi)||[]).length>2,
-        msg: '🔁 Repetitive structure'
-      },
-      { key:'ExcessiveTransitions',
-        test: t => (t.match(/\b(Furthermore|Moreover|Thus|Besides|Finally|Therefore|Additionally|In summary)\b/gi)||[]).length>3,
-        msg: '🌀 Excessive transitions'
-      },
-      { key:'UniformParagraphs',
-        test: t => {
-          const ps = t.split(/\n+/).filter(p=>p.trim());
-          const ls = ps.map(p=>p.split(/\s+/).length);
-          const avg = ls.reduce((a,b)=>a+b,0)/ls.length;
-          return ls.length>2 && ls.every(l=>Math.abs(l-avg)<10);
-        },
-        msg: '📏 Uniform paragraphs'
-      },
-      { key:'NoPersonalVoice',
-        test: t => (t.match(/\b(I|we|my|our|you|your)\b/gi)||[]).length<2,
-        msg: '🙅‍♂️ No personal voice'
-      },
-      { key:'NumericDensity',
-        test: t => {
-          const nums = t.match(/\b\d+(\.\d+)?%?\b/g)||[];
-          return nums.length > t.split(/\s+/).length*0.03;
-        },
-        msg: '🔢 High numeric density'
-      },
-      { key:'OpinionInsertion',
-        test: t => (t.match(/\b(It is important to note|In my opinion)\b/gi)||[]).length>0,
-        msg: '🗣️ Subtle opinion insertion'
-      },
-      { key:'RhetoricalQuestions',
-        test: t => (t.match(/\?\s/g)||[]).length<1,
-        msg: '❓ No questions'
-      },
-      { key:'LowLexicalDiversity',
-        test: t => {
-          const ws = t.split(/\s+/), uw = new Set(ws.map(w=>w.toLowerCase()));
-          return uw.size/ws.length < 0.4;
-        },
-        msg: '📊 Low lexical diversity'
-      },
-      { key:'PassiveVoice',
-        test: t => (t.match(/\b(is|was|were|been|being)\b\s+\w+ed\b/g)||[]).length>2,
-        msg: '🎭 Passive voice'
-      },
-      { key:'NgramRepetition',
-        test: t => {
-          const ws = t.split(/\s+/), tr = {};
-          for (let i=0; i<ws.length-2; i++){
-            const g = ws[i]+' '+ws[i+1]+' '+ws[i+2];
-            tr[g] = (tr[g]||0)+1;
-            if (tr[g]>2) return true;
-          }
-          return false;
-        },
-        msg: '🔂 N-gram repetition'
-      },
-      { key:'HedgeWords',
-        test: t => (t.match(/\b(possibly|potentially|arguably|perhaps|somewhat)\b/gi)||[]).length>3,
-        msg: '🔍 Hedge words'
-      },
-      { key:'AdverbOveruse',
-        test: t => (t.match(/\b\w+ly\b/gi)||[]).length>10,
-        msg: '🔍 Excessive adverb use'
-      },
-      { key:'ClichePhrases',
-        test: t => {
-          const c = [
-            'at the end of the day',
-            "in today's society",
-            'the fact of the matter',
-            'think outside the box',
-            'going forward',
-            'level playing field',
-            'in conclusion',
-            'to summarize',
-            'overall,',
-            'all things considered'
-          ];
-          const hits = c.filter(p => t.toLowerCase().includes(p)).length;
-          return hits > 1;
-        },
-        msg: '⚠️ Multiple stock/cliché phrases'
-      },
-      { key:'LongSentences',
-        test: t => {
-          const s = t.match(/[^.!?]+[.!?]/g)||[];
-          if (!s.length) return false;
-          const avg = s.reduce((a,sent)=>(a+sent.split(/\s+/).length),0)/s.length;
-          return avg>25;
-        },
-        msg: '📏 Avg sentence > 25 words'
-      },
-      { key:'EllipsisUsage',
-        test: t => (t.match(/…|\.\.\./g)||[]).length>1,
-        msg: '… Ellipsis overuse'
-      },
-      { key:'EmDashUsage',
-        test: t => (t.match(/—/g)||[]).length>2,
-        msg: '— Heavy em-dash use'
-      },
-      { key:'BaitPhrase',
-        test: t => BAIT_PHRASES.some(p => t.includes(p)),
-        msg: '🐟 Bait phrase detected'
-      },
-      {
-        key:'PunctuationSpacing',
-        invert: true,
-        test: t => {
-          const blocks = t.split(/[\n\.!?]+/).map(b => b.trim()).filter(Boolean);
-          let inconsistentBlocks = 0;
-          blocks.forEach(block => {
-            const totalPeriods = (block.match(/\./g)||[]).length;
-            const singleP = (block.match(/\.\s[A-Z]/g)||[]).length;
-            const doubleP = (block.match(/\.\s\s[A-Z]/g)||[]).length;
-            const totalCommas = (block.match(/,/g)||[]).length;
-            const correctC = (block.match(/,\s\w/g)||[]).length;
-            const badC = (block.match(/,(?!\s)/g)||[]).length;
-            const periodMix = totalPeriods>1 && singleP/totalPeriods>0.05 && doubleP/totalPeriods>0.05;
-            const commaMix = totalCommas>1 && correctC/totalCommas>0.05 && badC/totalCommas>0.05;
-            if (periodMix || commaMix) inconsistentBlocks++;
-          });
-          return inconsistentBlocks>=1;
-        },
-        msg: '⌛ Multiple inconsistent spacing blocks (human tell)'
-      }
-    ];
-
-    // ---- Detection & Chart ----
-    function startDetection() {
-      document.getElementById('spinner').style.display='block';
-      setTimeout(detectAI, 50);
-    }
-    function detectAI() {
-      const txt = normalizeText(document.getElementById('detectInput').value);
-      document.getElementById('spinner').style.display='none';
-      const strict = parseFloat(document.getElementById('strictnessSlider').value);
-      let score=0, msgs=[], details=[];
-      RULES.forEach(r => {
-        if (r.test(txt)) {
-          const w = WEIGHTS[r.key] * strict;
-          score += r.invert ? -w : w;
-          msgs.push(r.msg);
-          details.push({ name:r.key, value: Math.abs(w), isHuman: !!r.invert });
-        }
-      });
-      const finalScore = Math.min(10, Math.max(0, score)).toFixed(1);
-      const likelihood = finalScore>5 ? 'High':'Moderate';
-      reportData = { score: finalScore, likelihood, details };
-      document.getElementById('results').innerHTML =
-        `<strong>AI Match Score: ${finalScore}/10</strong><br>` +
-        `<strong>Likelihood:</strong> ${likelihood}` +
-        `<ul><li>${msgs.join('</li><li>')}</li></ul>`;
-      const ctx = document.getElementById('scoreChart').getContext('2d');
-      ctx.clearRect(0,0,800,1000);
-      details.forEach((f,i) => {
-        ctx.fillStyle = f.isHuman ? "#4CAF50" : "#4a90e2";  
-        ctx.fillRect(200, i*40+20, f.value*40, 25);
-        ctx.fillStyle = "#000";
-        ctx.fillText(`${f.name}: ${f.value.toFixed(1)}`, 10, i*40+35);
-      });
-    }
-    function clearDetect() {
-      document.getElementById('detectInput').value='';
-      document.getElementById('results').innerHTML='';
-      document.getElementById('scoreChart').getContext('2d').clearRect(0,0,800,1000);
-    }
-    function exportReport() {
-      const blob=new Blob([JSON.stringify(reportData,null,2)],{type:'application/json'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url; a.download='ai_detection_report.json'; a.click();
-      URL.revokeObjectURL(url);
-    }
-  </script>
+  <!-- Engine -->
+  <script src="engine.js"></script>
 </body>
 </html>
