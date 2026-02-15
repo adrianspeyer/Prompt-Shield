@@ -16,95 +16,129 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    /* PromptShield page-specific styles only — SUI handles the rest */
-
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 
     /* Layout */
     .ps-header { position: sticky; top: 0; z-index: 100; }
-    .ps-header-inner, .ps-main { max-width: 900px; margin: 0 auto; }
-    .ps-main { padding: var(--sui-space-4); }
+    .ps-header-inner, .ps-main { max-width: 880px; margin: 0 auto; }
+    .ps-main { padding: var(--sui-space-5) var(--sui-space-4); }
     @media (max-width: 600px) { .ps-main { padding: var(--sui-space-3); } }
 
     /* Logo */
     .ps-logo { display: flex; align-items: center; gap: var(--sui-space-2); }
-    .ps-logo-icon { width: 36px; height: 36px; background: var(--sui-blue-primary); border-radius: var(--sui-radius-sm);
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ps-logo-icon {
+      width: 36px; height: 36px; background: var(--sui-blue-primary); border-radius: var(--sui-radius-sm);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
     .ps-logo-icon svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .ps-logo-text { font-size: 20px; font-weight: 700; color: var(--sui-text-primary); }
 
-    /* Theme toggle icons */
+    /* Theme toggle */
     [data-theme="dark"] .ico-sun { display: block; }
     [data-theme="dark"] .ico-moon { display: none; }
     [data-theme="light"] .ico-sun { display: none; }
     [data-theme="light"] .ico-moon { display: block; }
 
-    /* Mode tabs */
-    .ps-tabs { display: flex; background: var(--sui-bg-elevated); border-radius: var(--sui-radius-md);
-      padding: 4px; gap: 4px; margin-bottom: var(--sui-space-4); border: 1px solid var(--sui-border); }
-    .ps-tab { flex: 1; padding: var(--sui-space-2) var(--sui-space-3); border: none; border-radius: var(--sui-radius-sm);
+    /* Tab bar */
+    .ps-tabs {
+      display: flex; background: var(--sui-bg-elevated); border-radius: var(--sui-radius-md);
+      padding: 4px; gap: 4px; margin-bottom: var(--sui-space-4); border: 1px solid var(--sui-border);
+    }
+    .ps-tab {
+      flex: 1; padding: var(--sui-space-2) var(--sui-space-3); border: none; border-radius: var(--sui-radius-sm);
       background: transparent; color: var(--sui-text-secondary); font-family: inherit; font-size: 14px;
       font-weight: 600; cursor: pointer; transition: all var(--sui-transition);
-      display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; }
+      display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
+    }
     .ps-tab:hover { color: var(--sui-text-primary); background: var(--sui-bg-card); }
     .ps-tab:focus-visible { outline: 2px solid var(--sui-blue-focus); outline-offset: 2px; }
     .ps-tab-active { background: var(--sui-bg-card); color: var(--sui-blue-primary); box-shadow: var(--sui-shadow-sm); }
     .ps-tab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* Card title with icon */
-    .ps-card-title svg { width: 20px; height: 20px; fill: none; stroke: var(--sui-blue-primary);
-      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    /* Panels — exclusive visibility via own classes (not sui-hidden) */
+    .ps-panel { display: none; }
+    .ps-panel-active { display: block; }
 
-    /* Textarea enhancements */
-    .ps-ta-wrap { position: relative; }
-    .ps-char-count { position: absolute; bottom: 12px; right: 12px; font-size: 12px;
+    /* Card title icon */
+    .ps-card-title svg {
+      width: 20px; height: 20px; fill: none; stroke: var(--sui-blue-primary);
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+    }
+
+    /* Textarea wrapper */
+    .ps-ta-wrap { position: relative; margin-bottom: var(--sui-space-3); }
+    .ps-char-count {
+      position: absolute; bottom: 12px; right: 12px; font-size: 12px;
       color: var(--sui-text-muted); pointer-events: none; background: var(--sui-bg-primary);
-      padding: 2px 6px; border-radius: 4px; }
+      padding: 2px 6px; border-radius: 4px;
+    }
+
+    /* Bait phrase box */
+    .ps-bait-box {
+      padding: var(--sui-space-3); background: var(--sui-bg-primary); border: 1px solid var(--sui-border);
+      border-radius: var(--sui-radius-md); margin-bottom: var(--sui-space-3);
+    }
+
+    /* Button row */
+    .ps-btn-row { display: flex; gap: var(--sui-space-2); flex-wrap: wrap; margin-bottom: var(--sui-space-3); }
+
+    /* Encoding summary */
+    .ps-enc-summary {
+      display: none; border: 1px solid var(--sui-border); border-radius: var(--sui-radius-md);
+      overflow: hidden; margin-bottom: var(--sui-space-3);
+    }
+    .ps-enc-summary-visible { display: block; }
+    .ps-enc-summary-head {
+      padding: var(--sui-space-2) var(--sui-space-3); background: var(--sui-bg-elevated);
+      font-size: 13px; font-weight: 600; color: var(--sui-text-secondary); border-bottom: 1px solid var(--sui-border);
+    }
+    .ps-enc-summary-body { padding: var(--sui-space-3); font-size: 13px; line-height: 1.8; color: var(--sui-text-secondary); }
+
+    /* Encoded output */
+    .ps-enc-output {
+      display: none; background: var(--sui-bg-primary); border: 1px solid var(--sui-border);
+      border-radius: var(--sui-radius-md); padding: var(--sui-space-3); font-size: 14px;
+      line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto;
+    }
+    .ps-enc-output-visible { display: block; }
 
     /* Strictness slider */
-    .ps-slider { display: flex; align-items: center; gap: var(--sui-space-3); padding: var(--sui-space-3);
+    .ps-slider {
+      display: flex; align-items: center; gap: var(--sui-space-3); padding: var(--sui-space-3);
       background: var(--sui-bg-primary); border: 1px solid var(--sui-border);
-      border-radius: var(--sui-radius-md); margin-bottom: var(--sui-space-3); }
-    .ps-slider-label { font-size: 14px; font-weight: 500; color: var(--sui-text-secondary);
-      white-space: nowrap; display: flex; align-items: center; gap: 6px; }
-    .ps-slider-label svg { width: 16px; height: 16px; fill: none; stroke: currentColor;
-      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      border-radius: var(--sui-radius-md); margin-bottom: var(--sui-space-3);
+    }
+    .ps-slider-label { font-size: 14px; font-weight: 500; color: var(--sui-text-secondary); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .ps-slider-label svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .ps-slider-track { flex: 1; min-width: 80px; }
     .ps-slider-value { font-size: 16px; font-weight: 700; color: var(--sui-blue-primary); min-width: 40px; text-align: center; }
 
     /* Spinner */
-    .ps-spin { display: none; align-items: center; justify-content: center; gap: 8px;
-      padding: var(--sui-space-4); color: var(--sui-text-muted); font-size: 14px; }
+    .ps-spin { display: none; align-items: center; justify-content: center; gap: 8px; padding: var(--sui-space-4); color: var(--sui-text-muted); font-size: 14px; }
     .ps-spin-visible { display: flex; }
-    .ps-dot { width: 8px; height: 8px; background: var(--sui-blue-primary); border-radius: 50%;
-      animation: psPulse 1s ease-in-out infinite; }
+    .ps-dot { width: 8px; height: 8px; background: var(--sui-blue-primary); border-radius: 50%; animation: psPulse 1s ease-in-out infinite; }
     .ps-dot:nth-child(2) { animation-delay: 0.2s; }
     .ps-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes psPulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+    @keyframes psPulse { 0%,100% { opacity:.3; transform:scale(.8); } 50% { opacity:1; transform:scale(1); } }
 
     /* Score card */
-    .ps-score-card { display: flex; align-items: center; gap: var(--sui-space-4); padding: var(--sui-space-4);
-      border-radius: var(--sui-radius-lg); margin-bottom: var(--sui-space-3); }
+    .ps-score-card { display: flex; align-items: center; gap: var(--sui-space-4); padding: var(--sui-space-4); border-radius: var(--sui-radius-lg); margin-bottom: var(--sui-space-3); }
     .ps-score-low { background: var(--sui-success-soft); border: 1px solid var(--sui-success); }
     .ps-score-mod { background: var(--sui-warning-soft); border: 1px solid var(--sui-warning); }
     .ps-score-high { background: var(--sui-error-soft); border: 1px solid var(--sui-error); }
-
     .ps-ring { width: 92px; height: 92px; flex-shrink: 0; position: relative; }
     .ps-ring svg { width: 92px; height: 92px; transform: rotate(-90deg); }
     .ps-ring-bg { fill: none; stroke: var(--sui-border); stroke-width: 6; }
     .ps-ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 800ms ease-out; }
-    .ps-ring-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 24px; font-weight: 700; color: var(--sui-text-primary); }
-
+    .ps-ring-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 24px; font-weight: 700; color: var(--sui-text-primary); }
     .ps-score-meta h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
     .ps-score-meta p { font-size: 14px; color: var(--sui-text-secondary); line-height: 1.5; }
-    .ps-score-low .ps-ring-fill { stroke: var(--sui-success); } .ps-score-low h3 { color: var(--sui-success-strong); }
-    .ps-score-mod .ps-ring-fill { stroke: var(--sui-warning); } .ps-score-mod h3 { color: var(--sui-warning-strong); }
-    .ps-score-high .ps-ring-fill { stroke: var(--sui-error); } .ps-score-high h3 { color: var(--sui-error-strong); }
+    .ps-score-low .ps-ring-fill { stroke: var(--sui-success); }  .ps-score-low h3 { color: var(--sui-success-strong); }
+    .ps-score-mod .ps-ring-fill { stroke: var(--sui-warning); }  .ps-score-mod h3 { color: var(--sui-warning-strong); }
+    .ps-score-high .ps-ring-fill { stroke: var(--sui-error); }   .ps-score-high h3 { color: var(--sui-error-strong); }
 
-    /* Confidence banner */
-    .ps-conf { display: flex; align-items: center; gap: 8px; padding: var(--sui-space-2) var(--sui-space-3);
-      border-radius: var(--sui-radius-sm); font-size: 13px; margin-bottom: var(--sui-space-3); }
+    /* Confidence */
+    .ps-conf { display: flex; align-items: center; gap: 8px; padding: var(--sui-space-2) var(--sui-space-3); border-radius: var(--sui-radius-sm); font-size: 13px; margin-bottom: var(--sui-space-3); }
     .ps-conf-0 { background: var(--sui-warning-soft); border: 1px solid var(--sui-warning); color: var(--sui-warning-strong); }
     .ps-conf-1 { background: var(--sui-info-soft); border: 1px solid var(--sui-info); color: var(--sui-info-strong); }
     .ps-conf-2 { background: var(--sui-success-soft); border: 1px solid var(--sui-success); color: var(--sui-success-strong); }
@@ -112,40 +146,29 @@
     /* Model attribution */
     .ps-model-attr { display: flex; gap: var(--sui-space-2); flex-wrap: wrap; margin-bottom: var(--sui-space-3); align-items: center; }
     .ps-model-label { font-size: 12px; color: var(--sui-text-muted); }
-    .ps-model-tag { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 99px;
-      border: 1px solid var(--sui-border); color: var(--sui-text-secondary); background: var(--sui-bg-elevated); }
+    .ps-model-tag { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--sui-border); color: var(--sui-text-secondary); background: var(--sui-bg-elevated); }
     .ps-model-match { border-color: var(--sui-blue-primary); color: var(--sui-blue-strong); background: var(--sui-blue-soft); }
 
-    /* Signal categories */
-    .ps-cat-title { font-size: 13px; font-weight: 700; color: var(--sui-text-muted); text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: var(--sui-space-2); padding-bottom: var(--sui-space-1);
-      border-bottom: 1px solid var(--sui-border); display: flex; align-items: center; gap: 6px; }
-    .ps-signal-cat { margin-bottom: var(--sui-space-2); }
-
-    /* Signal items */
-    .ps-signal { display: flex; align-items: flex-start; gap: var(--sui-space-2);
-      padding: var(--sui-space-2) var(--sui-space-3); border-radius: var(--sui-radius-sm);
-      background: var(--sui-bg-primary); border: 1px solid var(--sui-border);
-      font-size: 13px; color: var(--sui-text-secondary); transition: all var(--sui-transition); margin-bottom: 6px; }
+    /* Signals */
+    .ps-cat-title { font-size: 13px; font-weight: 700; color: var(--sui-text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: var(--sui-space-2); padding-bottom: var(--sui-space-1); border-bottom: 1px solid var(--sui-border); display: flex; align-items: center; gap: 6px; }
+    .ps-signal-cat { margin-bottom: var(--sui-space-3); }
+    .ps-signal { display: flex; align-items: flex-start; gap: var(--sui-space-2); padding: var(--sui-space-2) var(--sui-space-3); border-radius: var(--sui-radius-sm); background: var(--sui-bg-primary); border: 1px solid var(--sui-border); font-size: 13px; color: var(--sui-text-secondary); transition: all var(--sui-transition); margin-bottom: 6px; }
     .ps-sig-fired { background: var(--sui-error-soft); border-color: var(--sui-error); color: var(--sui-error-strong); }
     .ps-sig-human { background: var(--sui-success-soft); border-color: var(--sui-success); color: var(--sui-success-strong); }
     .ps-sig-icon { flex-shrink: 0; font-size: 16px; width: 22px; text-align: center; padding-top: 1px; }
     .ps-sig-body { flex: 1; min-width: 0; }
     .ps-sig-name { font-weight: 500; }
     .ps-sig-desc { font-size: 11px; color: var(--sui-text-muted); margin-top: 2px; line-height: 1.4; }
-    .ps-sig-fired .ps-sig-desc { color: var(--sui-error-strong); opacity: 0.75; }
-    .ps-sig-human .ps-sig-desc { color: var(--sui-success-strong); opacity: 0.75; }
-    .ps-sig-weight { font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
-      background: var(--sui-bg-elevated); white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
-    .ps-sig-fired .ps-sig-weight { background: rgba(0,0,0,0.06); }
-    .ps-sig-human .ps-sig-weight { background: rgba(0,0,0,0.05); }
+    .ps-sig-fired .ps-sig-desc { color: var(--sui-error-strong); opacity: .75; }
+    .ps-sig-human .ps-sig-desc { color: var(--sui-success-strong); opacity: .75; }
+    .ps-sig-weight { font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: var(--sui-bg-elevated); white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+    .ps-sig-fired .ps-sig-weight { background: rgba(0,0,0,.06); }
+    .ps-sig-human .ps-sig-weight { background: rgba(0,0,0,.05); }
 
     /* Bar chart */
     .ps-bar { display: flex; align-items: center; gap: var(--sui-space-2); margin-bottom: 6px; }
-    .ps-bar-label { width: 150px; font-size: 12px; color: var(--sui-text-secondary); text-align: right;
-      flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ps-bar-track { flex: 1; height: 22px; background: var(--sui-bg-primary); border-radius: 4px;
-      border: 1px solid var(--sui-border); overflow: hidden; }
+    .ps-bar-label { width: 150px; font-size: 12px; color: var(--sui-text-secondary); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ps-bar-track { flex: 1; height: 22px; background: var(--sui-bg-primary); border-radius: 4px; border: 1px solid var(--sui-border); overflow: hidden; }
     .ps-bar-fill { height: 100%; border-radius: 3px; transition: width 600ms ease-out; min-width: 2px; }
     .ps-bar-ai { background: var(--sui-error); }
     .ps-bar-human { background: var(--sui-success); }
@@ -153,36 +176,36 @@
     .ps-bar-empty { font-size: 13px; color: var(--sui-text-muted); padding: var(--sui-space-2); }
     @media (max-width: 500px) { .ps-bar-label { width: 90px; font-size: 11px; } }
 
+    /* Results (hidden until analysis) */
+    .ps-results { display: none; }
+    .ps-results-active { display: block; }
+
     /* Toast */
-    .ps-toast { position: fixed; bottom: var(--sui-space-4); right: var(--sui-space-4);
-      padding: var(--sui-space-3) var(--sui-space-4); border-radius: var(--sui-radius-md);
-      font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px;
-      box-shadow: var(--sui-shadow-lg); z-index: 200; transform: translateY(120%); opacity: 0;
-      transition: all 300ms ease-out; }
+    .ps-toast { position: fixed; bottom: var(--sui-space-4); right: var(--sui-space-4); padding: var(--sui-space-3) var(--sui-space-4); border-radius: var(--sui-radius-md); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: var(--sui-shadow-lg); z-index: 200; transform: translateY(120%); opacity: 0; transition: all 300ms ease-out; }
     .ps-toast-show { transform: translateY(0); opacity: 1; }
     .ps-toast-ok { background: #15803D; color: #fff; }
     .ps-toast-info { background: #0E7490; color: #fff; }
 
     /* Footer */
-    .ps-footer { text-align: center; padding: var(--sui-space-5) var(--sui-space-4); font-size: 12px; color: var(--sui-text-muted); }
+    .ps-footer { text-align: center; padding: var(--sui-space-6) var(--sui-space-4) var(--sui-space-5); font-size: 12px; color: var(--sui-text-muted); }
     .ps-footer a { color: var(--sui-blue-primary); text-decoration: none; }
     .ps-footer a:hover { text-decoration: underline; }
 
-    /* Utility - hide on small screens */
     @media (max-width: 480px) { .ps-hide-mobile { display: none; } }
   </style>
 </head>
 
 <body>
+
   <!-- ==================== HEADER ==================== -->
   <header class="ps-header sui-card" style="border-radius:0" role="banner">
-    <div class="ps-header-inner sui-flex sui-flex-between sui-items-center" style="padding:var(--sui-space-3) 0">
+    <div class="ps-header-inner sui-flex sui-flex-between sui-items-center" style="padding:var(--sui-space-3) var(--sui-space-4)">
       <div class="ps-logo">
         <div class="ps-logo-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <span class="ps-logo-text">PromptShield</span>
-        <span class="sui-badge sui-badge-info ps-hide-mobile">v2.0</span>
+        <span class="sui-badge sui-badge-info ps-hide-mobile" style="margin-left:4px">v2.0</span>
         <span class="sui-badge sui-badge-warning ps-hide-mobile">⚠ Experimental</span>
       </div>
       <button class="sui-btn sui-btn-ghost" onclick="togTheme()" aria-label="Toggle dark mode" style="min-width:44px;min-height:44px;padding:0">
@@ -195,7 +218,7 @@
   <!-- ==================== MAIN ==================== -->
   <main class="ps-main" role="main">
 
-    <!-- Mode Tabs -->
+    <!-- Tab Bar -->
     <div class="ps-tabs" role="tablist" aria-label="Mode selection">
       <button class="ps-tab ps-tab-active" role="tab" aria-selected="true" aria-controls="panel-encode" data-mode="encode" onclick="switchMode('encode')">
         <svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
@@ -208,30 +231,30 @@
     </div>
 
     <!-- ======== ENCODE PANEL ======== -->
-    <div id="panel-encode" role="tabpanel">
+    <div id="panel-encode" class="ps-panel ps-panel-active" role="tabpanel">
       <div class="sui-card sui-card-lg">
-        <h2 class="ps-card-title sui-flex sui-items-center sui-gap-2 sui-mb-2">
+
+        <h2 class="ps-card-title sui-flex sui-items-center sui-gap-2" style="margin-bottom:var(--sui-space-1)">
           <svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
           Encode Instructions
         </h2>
-        <p class="sui-text-muted sui-mb-3" style="font-size:14px">Paste your assignment or upload a file. The encoder adds an invisible watermark and a bait phrase that AI tends to echo back.</p>
+        <p class="sui-text-muted" style="font-size:14px;margin-bottom:var(--sui-space-4)">Paste your assignment or upload a file. The encoder adds an invisible watermark and a bait phrase that AI tends to echo back.</p>
 
         <div class="ps-ta-wrap">
           <label for="encodeInput" class="sui-visually-hidden">Assignment instructions</label>
-          <textarea id="encodeInput" class="sui-input" style="min-height:200px;resize:vertical;font-size:15px;line-height:1.6" placeholder="Paste your assignment instructions here, or use Upload File below..."></textarea>
+          <textarea id="encodeInput" class="sui-input" style="min-height:200px;resize:vertical;font-size:15px;line-height:1.6;width:100%" placeholder="Paste your assignment instructions here, or use Upload File below..."></textarea>
           <span class="ps-char-count" id="encodeCount" aria-hidden="true">0 chars</span>
         </div>
 
-        <!-- Custom Bait Phrase -->
-        <div class="sui-mt-3" style="padding:var(--sui-space-3);background:var(--sui-bg-primary);border:1px solid var(--sui-border);border-radius:var(--sui-radius-md)">
+        <div class="ps-bait-box">
           <label for="baitCustom" style="font-size:13px;font-weight:600;color:var(--sui-text-secondary);display:block;margin-bottom:var(--sui-space-1)">
             🎣 Add Your Own Bait Phrase <span style="font-weight:400;color:var(--sui-text-muted)">(optional)</span>
           </label>
-          <p style="font-size:12px;color:var(--sui-text-muted);margin-bottom:var(--sui-space-2)">PromptShield always injects one of its built-in bait phrases. You can add a second one here — something only you would recognize if it shows up in a student's submission.</p>
+          <p style="font-size:12px;color:var(--sui-text-muted);margin-bottom:var(--sui-space-2);line-height:1.5">PromptShield always injects one of its built-in bait phrases. You can add a second one here — something only you would recognize if it shows up in a student's submission.</p>
           <input id="baitCustom" type="text" class="sui-input" style="font-size:14px;width:100%" placeholder='e.g. "Consider how innovation shapes ethical responsibility."' maxlength="200" aria-label="Your custom bait phrase">
         </div>
 
-        <div class="sui-flex sui-gap-2 sui-mt-3" style="flex-wrap:wrap">
+        <div class="ps-btn-row">
           <button class="sui-btn sui-btn-primary" onclick="doEncode()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>
             Encode
@@ -246,52 +269,48 @@
             Download Encoded
           </button>
         </div>
-        <input type="file" id="fileUpload" accept=".txt,.md,.rtf,.html,.htm" class="sui-hidden" aria-hidden="true">
 
-        <!-- Encoding Summary -->
-        <div id="encodeSummary" class="sui-hidden sui-mt-3" style="border:1px solid var(--sui-border);border-radius:var(--sui-radius-md);overflow:hidden">
-          <div style="padding:var(--sui-space-2) var(--sui-space-3);background:var(--sui-bg-elevated);font-size:13px;font-weight:600;color:var(--sui-text-secondary);border-bottom:1px solid var(--sui-border)">
-            ✅ Encoding Summary — What Was Added
-          </div>
-          <div id="encodeSummaryBody" style="padding:var(--sui-space-3);font-size:13px;line-height:1.8;color:var(--sui-text-secondary)"></div>
+        <input type="file" id="fileUpload" accept=".txt,.md,.rtf,.html,.htm" style="display:none" aria-hidden="true">
+
+        <div id="encodeSummary" class="ps-enc-summary">
+          <div class="ps-enc-summary-head">✅ Encoding Summary — What Was Added</div>
+          <div id="encodeSummaryBody" class="ps-enc-summary-body"></div>
         </div>
 
-        <!-- Encoded Output -->
-        <div id="encodeOutput" class="sui-hidden" style="background:var(--sui-bg-primary);border:1px solid var(--sui-border);border-radius:var(--sui-radius-md);padding:var(--sui-space-3);margin-top:var(--sui-space-3);font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto" aria-live="polite"></div>
+        <div id="encodeOutput" class="ps-enc-output" aria-live="polite"></div>
+
       </div>
     </div>
 
     <!-- ======== DETECT PANEL ======== -->
-    <div id="panel-detect" role="tabpanel" class="sui-hidden">
+    <div id="panel-detect" class="ps-panel" role="tabpanel">
 
-      <!-- Strictness Slider -->
       <div class="ps-slider">
         <span class="ps-slider-label">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Strictness
         </span>
         <div class="ps-slider-track">
-          <input id="strictSlider" type="range" min="0.5" max="2" step="0.1" value="1"
-                 oninput="updateStrictness()" aria-label="Detection strictness multiplier">
+          <input id="strictSlider" type="range" min="0.5" max="2" step="0.1" value="1" oninput="updateStrictness()" aria-label="Detection strictness multiplier">
         </div>
         <span class="ps-slider-value" id="strictVal" aria-live="polite">1.0×</span>
       </div>
 
-      <!-- Input Card -->
       <div class="sui-card sui-card-lg">
-        <h2 class="ps-card-title sui-flex sui-items-center sui-gap-2 sui-mb-2">
+
+        <h2 class="ps-card-title sui-flex sui-items-center sui-gap-2" style="margin-bottom:var(--sui-space-1)">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Detect AI Content
         </h2>
-        <p class="sui-text-muted sui-mb-3" style="font-size:14px">Paste text or upload a file to analyze for AI-generated patterns across 6 signal categories.</p>
+        <p class="sui-text-muted" style="font-size:14px;margin-bottom:var(--sui-space-4)">Paste text or upload a file to analyze for AI-generated patterns across 6 signal categories.</p>
 
         <div class="ps-ta-wrap">
           <label for="detectInput" class="sui-visually-hidden">Text to analyze</label>
-          <textarea id="detectInput" class="sui-input" style="min-height:200px;resize:vertical;font-size:15px;line-height:1.6" placeholder="Paste student content here, or use Upload File below..."></textarea>
+          <textarea id="detectInput" class="sui-input" style="min-height:200px;resize:vertical;font-size:15px;line-height:1.6;width:100%" placeholder="Paste student content here, or use Upload File below..."></textarea>
           <span class="ps-char-count" id="detectCount" aria-hidden="true">0 chars</span>
         </div>
 
-        <div class="sui-flex sui-gap-2 sui-mt-3" style="flex-wrap:wrap">
+        <div class="ps-btn-row">
           <button class="sui-btn sui-btn-primary" onclick="startAnalysis()">Analyze</button>
           <button class="sui-btn sui-btn-secondary" onclick="uploadFile('detectInput')">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -300,24 +319,20 @@
           <button class="sui-btn sui-btn-secondary" onclick="clearDetect()">Clear</button>
           <button class="sui-btn sui-btn-secondary" onclick="exportReport()" id="exportBtn" disabled>Export JSON</button>
         </div>
+
       </div>
 
-      <!-- Spinner -->
       <div class="ps-spin" id="spinner" role="status">
         <div class="ps-dot"></div><div class="ps-dot"></div><div class="ps-dot"></div>
         <span>Analyzing text…</span>
       </div>
 
-      <!-- Results Panel -->
-      <div id="resultsPanel" class="sui-hidden" aria-live="polite">
-
-        <!-- Score Card -->
+      <div id="resultsPanel" class="ps-results" aria-live="polite">
         <div class="ps-score-card" id="scoreCard">
           <div class="ps-ring">
             <svg viewBox="0 0 92 92">
               <circle class="ps-ring-bg" cx="46" cy="46" r="40"/>
-              <circle class="ps-ring-fill" id="ringFill" cx="46" cy="46" r="40"
-                      stroke-dasharray="251.33" stroke-dashoffset="251.33"/>
+              <circle class="ps-ring-fill" id="ringFill" cx="46" cy="46" r="40" stroke-dasharray="251.33" stroke-dashoffset="251.33"/>
             </svg>
             <div class="ps-ring-num" id="ringNum">0</div>
           </div>
@@ -326,25 +341,15 @@
             <p id="scoreDesc"></p>
           </div>
         </div>
-
-        <!-- Confidence -->
-        <div class="ps-conf" id="confBanner" role="status">
-          <span id="confIcon" aria-hidden="true"></span>
-          <span id="confText"></span>
-        </div>
-
-        <!-- Model Attribution -->
+        <div class="ps-conf" id="confBanner" role="status"><span id="confIcon" aria-hidden="true"></span><span id="confText"></span></div>
         <div class="ps-model-attr" id="modelAttr"></div>
-
-        <!-- Signal Categories -->
         <div id="signalContainer"></div>
-
-        <!-- Bar Chart -->
-        <div class="sui-card">
+        <div class="sui-card" style="margin-top:var(--sui-space-3)">
           <div class="ps-cat-title">Factor Breakdown</div>
           <div id="barChart"></div>
         </div>
       </div>
+
     </div>
   </main>
 
@@ -359,13 +364,11 @@
     </p>
   </footer>
 
-  <!-- Toast -->
   <div class="ps-toast ps-toast-ok" id="toast" role="status" aria-live="polite">
     <span id="toastIcon" aria-hidden="true">✔</span>
     <span id="toastMsg"></span>
   </div>
 
-  <!-- Engine -->
   <script src="engine.js"></script>
 </body>
 </html>

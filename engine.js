@@ -27,8 +27,8 @@ function togTheme() {
 //  MODE SWITCH
 // ========================================================================
 function switchMode(m) {
-  document.getElementById('panel-encode').classList.toggle('sui-hidden', m !== 'encode');
-  document.getElementById('panel-detect').classList.toggle('sui-hidden', m !== 'detect');
+  document.querySelectorAll('.ps-panel').forEach(p => p.classList.remove('ps-panel-active'));
+  document.getElementById('panel-' + m).classList.add('ps-panel-active');
   document.querySelectorAll('.ps-tab').forEach(b => {
     const active = b.dataset.mode === m;
     b.classList.toggle('ps-tab-active', active);
@@ -142,7 +142,7 @@ function doEncode() {
   // Show encoded output
   const output = document.getElementById('encodeOutput');
   output.textContent = encoded;
-  output.classList.remove('sui-hidden');
+  output.classList.add('ps-enc-output-visible');
   document.getElementById('copyBtn').disabled = false;
   document.getElementById('dlBtn').disabled = false;
 
@@ -158,7 +158,7 @@ function doEncode() {
   html += '<div style="margin-bottom:8px">📍 <strong>Injection Point:</strong> ' + (parts.length > 1 ? 'After the first paragraph break.' : 'Appended at the end (no paragraph break found).') + '</div>';
   html += '<div style="color:var(--sui-text-muted);font-style:italic;margin-top:4px">Tip: When you receive a student submission, paste it into the Detect tab. If the watermark or bait phrases survive, they\'ll light up immediately.</div>';
   body.innerHTML = html;
-  summary.classList.remove('sui-hidden');
+  summary.classList.add('ps-enc-summary-visible');
 
   toast('Encoded with watermark + bait phrase' + (customBait ? 's' : ''));
 }
@@ -481,7 +481,7 @@ function startAnalysis() {
   const val = document.getElementById('detectInput').value;
   if (!val.trim()) { toast('Please enter text first', 'info'); return; }
   document.getElementById('spinner').classList.add('ps-spin-visible');
-  document.getElementById('resultsPanel').classList.add('sui-hidden');
+  document.getElementById('resultsPanel').classList.remove('ps-results-active');
   setTimeout(runAnalysis, 150);
 }
 
@@ -567,7 +567,7 @@ function runAnalysis() {
 
   // Show results
   document.getElementById('spinner').classList.remove('ps-spin-visible');
-  document.getElementById('resultsPanel').classList.remove('sui-hidden');
+  document.getElementById('resultsPanel').classList.add('ps-results-active');
   document.getElementById('exportBtn').disabled = false;
 }
 
@@ -661,7 +661,7 @@ function renderBarChart(fired) {
 function clearDetect() {
   document.getElementById('detectInput').value = '';
   document.getElementById('detectCount').textContent = '0 chars';
-  document.getElementById('resultsPanel').classList.add('sui-hidden');
+  document.getElementById('resultsPanel').classList.remove('ps-results-active');
   document.getElementById('exportBtn').disabled = true;
   document.getElementById('ringFill').style.strokeDashoffset = 251.33;
   document.getElementById('ringNum').textContent = '0';
